@@ -1,13 +1,11 @@
-import { type StatKey, type HunterStats } from '@/lib/game-system';
-import { Plus, Sword, Brain, Heart, Wind, Eye } from 'lucide-react';
+import { type StatKey, ALL_STATS, type HunterStats } from '@/lib/game-system';
+import { Plus, Sword, Brain, Heart, Wind, Eye, Zap, Code, Palette, MessageSquare, ShieldCheck, Timer, Dice4, Star, Shield, Activity } from 'lucide-react';
 
-const STAT_CONFIG: { key: StatKey; label: string; fullLabel: string; icon: typeof Sword }[] = [
-  { key: 'str', label: 'STR', fullLabel: 'Strength', icon: Sword },
-  { key: 'int', label: 'INT', fullLabel: 'Intelligence', icon: Brain },
-  { key: 'vit', label: 'VIT', fullLabel: 'Vitality', icon: Heart },
-  { key: 'agi', label: 'AGI', fullLabel: 'Agility', icon: Wind },
-  { key: 'per', label: 'PER', fullLabel: 'Perception', icon: Eye },
-];
+const STAT_ICONS: Record<StatKey, typeof Sword> = {
+  str: Sword, sta: Timer, dis: ShieldCheck, foc: Eye, int: Brain, eq: Heart,
+  tech: Code, cre: Palette, com: MessageSquare, conf: Zap, cons: Wind,
+  luk: Dice4, rep: Star, res: Shield, hp: Activity,
+};
 
 interface StatAllocationProps {
   stats: HunterStats;
@@ -16,51 +14,62 @@ interface StatAllocationProps {
 }
 
 export default function StatAllocation({ stats, statPoints, onAllocate }: StatAllocationProps) {
+  const categories = [
+    { label: 'Core Stats', stats: ALL_STATS.filter(s => s.category === 'core') },
+    { label: 'Secondary Stats', stats: ALL_STATS.filter(s => s.category === 'secondary') },
+    { label: 'Hidden Stats', stats: ALL_STATS.filter(s => s.category === 'hidden') },
+  ];
+
   return (
-    <div className="status-window rounded-lg p-5 animate-slide-up">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">Stats</h3>
-        {statPoints > 0 && (
+    <div className="space-y-4 animate-slide-up">
+      {statPoints > 0 && (
+        <div className="status-window rounded-lg p-3 text-center">
           <span className="text-xs font-display text-glow-warning animate-pulse-glow">
-            {statPoints} points available
+            {statPoints} stat points available
           </span>
-        )}
-      </div>
-      <div className="space-y-3">
-        {STAT_CONFIG.map((s) => {
-          const Icon = s.icon;
-          const value = stats[s.key];
-          const maxVisible = 50;
-          const percent = Math.min((value / maxVisible) * 100, 100);
-          return (
-            <div key={s.key} className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-primary">
-                <Icon size={14} />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{s.fullLabel}</span>
-                  <span className="font-display text-sm font-bold text-primary">{value}</span>
+        </div>
+      )}
+
+      {categories.map((cat) => (
+        <div key={cat.label} className="status-window rounded-lg p-4">
+          <h3 className="font-display text-xs uppercase tracking-wider text-muted-foreground mb-3">{cat.label}</h3>
+          <div className="space-y-2.5">
+            {cat.stats.map((s) => {
+              const Icon = STAT_ICONS[s.key];
+              const value = stats[s.key];
+              const maxVisible = 50;
+              const percent = Math.min((value / maxVisible) * 100, 100);
+              return (
+                <div key={s.key} className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-md bg-secondary flex items-center justify-center text-primary shrink-0">
+                    <Icon size={12} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{s.fullLabel}</span>
+                      <span className="font-display text-xs font-bold text-primary">{value}</span>
+                    </div>
+                    <div className="h-1 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-300"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                  {statPoints > 0 && s.category !== 'hidden' && (
+                    <button
+                      onClick={() => onAllocate(s.key)}
+                      className="w-6 h-6 rounded-md bg-primary/20 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors shrink-0"
+                    >
+                      <Plus size={10} />
+                    </button>
+                  )}
                 </div>
-                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-300"
-                    style={{ width: `${percent}%` }}
-                  />
-                </div>
-              </div>
-              {statPoints > 0 && (
-                <button
-                  onClick={() => onAllocate(s.key)}
-                  className="w-7 h-7 rounded-md bg-primary/20 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors"
-                >
-                  <Plus size={12} />
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

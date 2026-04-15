@@ -1,5 +1,5 @@
 import { type Quest, type Difficulty } from '@/lib/game-system';
-import { Check, Trash2, Flame, Swords, Shield, Zap } from 'lucide-react';
+import { Check, Trash2, Flame, Swords, Shield, Zap, Coins } from 'lucide-react';
 
 const DIFFICULTY_CONFIG: Record<Difficulty, { label: string; color: string; icon: typeof Flame }> = {
   easy: { label: 'E', color: 'text-rank-d bg-rank-d/10', icon: Shield },
@@ -29,6 +29,7 @@ export default function QuestList({ quests, onComplete, onDelete, title, emptyTe
           {quests.map((quest) => {
             const config = DIFFICULTY_CONFIG[quest.difficulty];
             const Icon = config.icon;
+            const statEntries = Object.entries(quest.statRewards || {}).filter(([, v]) => v && v > 0);
             return (
               <div
                 key={quest.id}
@@ -49,15 +50,23 @@ export default function QuestList({ quests, onComplete, onDelete, title, emptyTe
                   <p className={`text-sm font-medium truncate ${quest.completed ? 'line-through text-muted-foreground' : ''}`}>
                     {quest.title}
                   </p>
-                  <p className="text-xs text-muted-foreground">+{quest.xpReward} XP</p>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <span>+{quest.xpReward} XP</span>
+                    <span className="flex items-center gap-0.5"><Coins size={8} className="text-glow-warning" />{quest.coinReward}</span>
+                    {statEntries.length > 0 && (
+                      <span className="text-primary">
+                        {statEntries.map(([k, v]) => `+${v}${k.toUpperCase()}`).join(' ')}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className={`w-7 h-7 rounded-md flex items-center justify-center ${config.color}`}>
+                <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${config.color}`}>
                   <Icon size={14} />
                 </div>
                 {!quest.completed && (
                   <button
                     onClick={() => onDelete(quest.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   >
                     <Trash2 size={14} />
                   </button>

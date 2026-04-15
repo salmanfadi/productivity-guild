@@ -1,10 +1,11 @@
-import { Scroll, User, Swords, Target } from 'lucide-react';
+import { Scroll, User, Swords, Target, LayoutDashboard, Bell } from 'lucide-react';
 
-export type Tab = 'quests' | 'daily' | 'stats' | 'profile';
+export type Tab = 'quests' | 'daily' | 'stats' | 'dashboard' | 'profile';
 
 const TABS: { key: Tab; label: string; icon: typeof Scroll }[] = [
   { key: 'quests', label: 'Quests', icon: Scroll },
   { key: 'daily', label: 'Daily', icon: Target },
+  { key: 'dashboard', label: 'Sheet', icon: LayoutDashboard },
   { key: 'stats', label: 'Stats', icon: Swords },
   { key: 'profile', label: 'Profile', icon: User },
 ];
@@ -12,9 +13,10 @@ const TABS: { key: Tab; label: string; icon: typeof Scroll }[] = [
 interface BottomNavProps {
   active: Tab;
   onChange: (tab: Tab) => void;
+  hasUnread?: boolean;
 }
 
-export default function BottomNav({ active, onChange }: BottomNavProps) {
+export default function BottomNav({ active, onChange, hasUnread }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-border">
       <div className="max-w-md mx-auto flex">
@@ -25,12 +27,12 @@ export default function BottomNav({ active, onChange }: BottomNavProps) {
             <button
               key={tab.key}
               onClick={() => onChange(tab.key)}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 transition-all ${
+              className={`flex-1 flex flex-col items-center gap-1 py-3 transition-all relative ${
                 isActive ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <Icon size={20} className={isActive ? 'drop-shadow-[0_0_6px_hsl(var(--glow-primary)/0.5)]' : ''} />
-              <span className="text-[10px] uppercase tracking-wider font-medium">{tab.label}</span>
+              <Icon size={18} className={isActive ? 'drop-shadow-[0_0_6px_hsl(var(--glow-primary)/0.5)]' : ''} />
+              <span className="text-[9px] uppercase tracking-wider font-medium">{tab.label}</span>
             </button>
           );
         })}

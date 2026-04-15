@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import {
-  type PlayerState, type Difficulty, type StatKey,
-  createQuest, getDailyQuests, getDefaultState, getRank, getXpToNext,
-  loadState, saveState,
+  type PlayerState, type Difficulty, type StatKey, type QuestType,
+  createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getRank, getXpToNext,
+  loadState, saveState, maybeGenerateRandomEvent, createSystemMessage,
 } from '@/lib/game-system';
 import StatusPanel from '@/components/StatusPanel';
 import QuestList from '@/components/QuestList';
@@ -10,6 +10,8 @@ import AddQuestModal from '@/components/AddQuestModal';
 import StatAllocation from '@/components/StatAllocation';
 import LevelUpOverlay from '@/components/LevelUpOverlay';
 import ProfileTab from '@/components/ProfileTab';
+import Dashboard from '@/components/Dashboard';
+import SystemMessages from '@/components/SystemMessages';
 import BottomNav, { type Tab } from '@/components/BottomNav';
 import { Plus } from 'lucide-react';
 
@@ -36,6 +38,7 @@ export default function Index() {
       let level = prev.level;
       let xpToNext = prev.xpToNext;
       let statPoints = prev.statPoints;
+      let coins = prev.coins + quest.coinReward;
 
       while (xp >= xpToNext) {
         xp -= xpToNext;
@@ -45,24 +48,61 @@ export default function Index() {
         setLevelUpShow(true);
       }
 
+      // Apply stat rewards from quest
+      const newStats = { ...prev.stats };
+      for (const [key, val] of Object.entries(quest.statRewards || {})) {
+        if (val) newStats[key as StatKey] = (newStats[key as StatKey] || 0) + val;
+      }
+
+      // Random event
+      const messages = [...prev.systemMessages];
+      const event = maybeGenerateRandomEvent();
+      if (event) {
+        messages.push(event);
+        // Apply random stat boosts from events
+        if (event.text.includes('+2 LUK')) newStats.luk += 2;
+        if (event.text.includes('+1 INT')) newStats.int += 1;
+      }
+
+      // Streak: update if completing first quest today
+      let streak = prev.streak;
+      let bestStreak = prev.bestStreak;
+      const today = new Date().toISOString().slice(0, 10);
+      if (prev.lastActiveDate !== today || prev.totalQuestsCompleted === 0) {
+        streak = prev.streak + 1;
+        bestStreak = Math.max(bestStreak, streak);
+        // Consistency bonus
+        if (streak > 0 && streak % 7 === 0) {
+          newStats.cons += 1;
+          messages.push(createSystemMessage(`🔥 ${streak}-day streak! +1 Consistency`, 'reward'));
+        }
+      }
+
       return {
         ...prev,
         xp,
         level,
         xpToNext,
         statPoints,
+        coins,
+        streak,
+        bestStreak,
+        lastActiveDate: today,
+        stats: newStats,
         rank: getRank(level),
         quests: prev.quests.map((q) => (q.id === id ? { ...q, completed: true } : q)),
         totalQuestsCompleted: prev.totalQuestsCompleted + 1,
-        dailyQuestsCompleted: quest.isDaily ? prev.dailyQuestsCompleted + 1 : prev.dailyQuestsCompleted,
+        dailyQuestsCompleted: quest.questType === 'daily' ? prev.dailyQuestsCompleted + 1 : prev.dailyQuestsCompleted,
+        weeklyQuestsCompleted: quest.questType === 'weekly' ? (prev.weeklyQuestsCompleted || 0) + 1 : (prev.weeklyQuestsCompleted || 0),
+        systemMessages: messages,
       };
     });
   };
 
-  const handleAddQuest = (title: string, difficulty: Difficulty) => {
+  const handleAddQuest = (title: string, difficulty: Difficulty, questType: QuestType, statRewards: Partial<Record<StatKey, number>>) => {
     update((prev) => ({
       ...prev,
-      quests: [...prev.quests, createQuest(title, difficulty)],
+      quests: [...prev.quests, createQuest(title, difficulty, questType, statRewards)],
     }));
   };
 
@@ -86,10 +126,25 @@ export default function Index() {
 
   const handleLoadDailies = () => {
     update((prev) => {
-      const hasDailies = prev.quests.some((q) => q.isDaily && !q.completed);
+      const hasDailies = prev.quests.some((q) => q.questType === 'daily' && !q.completed);
       if (hasDailies) return prev;
       return { ...prev, quests: [...prev.quests, ...getDailyQuests()] };
     });
+  };
+
+  const handleLoadWeeklies = () => {
+    update((prev) => {
+      const hasWeeklies = prev.quests.some((q) => q.questType === 'weekly' && !q.completed);
+      if (hasWeeklies) return prev;
+      return { ...prev, quests: [...prev.quests, ...getWeeklyQuests()] };
+    });
+  };
+
+  const handleDismissMessage = (id: string) => {
+    update((prev) => ({
+      ...prev,
+      systemMessages: prev.systemMessages.map(m => m.id === id ? { ...m, read: true } : m),
+    }));
   };
 
   const handleReset = () => {
@@ -102,15 +157,21 @@ export default function Index() {
     update((prev) => ({ ...prev, name }));
   };
 
-  const activeQuests = player.quests.filter((q) => !q.isDaily);
-  const dailyQuests = player.quests.filter((q) => q.isDaily);
+  const activeQuests = player.quests.filter((q) => q.questType !== 'daily' && q.questType !== 'weekly');
+  const dailyQuests = player.quests.filter((q) => q.questType === 'daily');
+  const weeklyQuests = player.quests.filter((q) => q.questType === 'weekly');
 
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="max-w-md mx-auto px-4 pt-6">
         <StatusPanel player={player} />
 
-        <div className="mt-5">
+        {/* System Messages */}
+        <div className="mt-4">
+          <SystemMessages messages={player.systemMessages} onDismiss={handleDismissMessage} />
+        </div>
+
+        <div className="mt-3">
           {tab === 'quests' && (
             <>
               <QuestList
@@ -147,8 +208,29 @@ export default function Index() {
                 title="Daily Quests"
                 emptyText="Accept your daily quests above!"
               />
+
+              {/* Weekly section */}
+              <div className="mt-6">
+                {weeklyQuests.length === 0 && (
+                  <button
+                    onClick={handleLoadWeeklies}
+                    className="w-full mb-3 py-3 rounded-lg bg-accent text-accent-foreground font-display text-sm uppercase tracking-wider font-bold glow-accent"
+                  >
+                    Accept Weekly Quests
+                  </button>
+                )}
+                <QuestList
+                  quests={weeklyQuests}
+                  onComplete={handleCompleteQuest}
+                  onDelete={handleDeleteQuest}
+                  title="Weekly Quests"
+                  emptyText="Accept your weekly quests above!"
+                />
+              </div>
             </>
           )}
+
+          {tab === 'dashboard' && <Dashboard player={player} />}
 
           {tab === 'stats' && (
             <StatAllocation
