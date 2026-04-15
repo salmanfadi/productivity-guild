@@ -1,5 +1,5 @@
 import { type PlayerState, getRank, type Rank } from '@/lib/game-system';
-import { Trophy, Target, Flame, RotateCcw } from 'lucide-react';
+import { Trophy, Target, Flame, RotateCcw, Coins, Calendar } from 'lucide-react';
 
 const RANK_COLORS: Record<Rank, string> = {
   E: 'text-rank-e', D: 'text-rank-d', C: 'text-rank-c',
@@ -35,27 +35,25 @@ export default function ProfileTab({ player, onReset, onNameChange }: ProfileTab
       <div className="status-window rounded-lg p-5">
         <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground mb-3">Achievements</h3>
         <div className="grid grid-cols-3 gap-3">
-          <div className="text-center">
-            <div className="w-10 h-10 rounded-lg bg-secondary mx-auto mb-1 flex items-center justify-center text-glow-warning">
-              <Trophy size={18} />
-            </div>
-            <p className="font-display text-lg font-bold">{player.totalQuestsCompleted}</p>
-            <p className="text-[10px] text-muted-foreground">Quests Done</p>
-          </div>
-          <div className="text-center">
-            <div className="w-10 h-10 rounded-lg bg-secondary mx-auto mb-1 flex items-center justify-center text-primary">
-              <Target size={18} />
-            </div>
-            <p className="font-display text-lg font-bold">{player.level}</p>
-            <p className="text-[10px] text-muted-foreground">Level</p>
-          </div>
-          <div className="text-center">
-            <div className="w-10 h-10 rounded-lg bg-secondary mx-auto mb-1 flex items-center justify-center text-glow-danger">
-              <Flame size={18} />
-            </div>
-            <p className="font-display text-lg font-bold">{player.dailyQuestsCompleted}</p>
-            <p className="text-[10px] text-muted-foreground">Daily Done</p>
-          </div>
+          {[
+            { icon: Trophy, value: player.totalQuestsCompleted, label: 'Quests Done', color: 'text-glow-warning' },
+            { icon: Target, value: player.level, label: 'Level', color: 'text-primary' },
+            { icon: Flame, value: player.bestStreak, label: 'Best Streak', color: 'text-glow-danger' },
+            { icon: Coins, value: player.coins, label: 'Coins', color: 'text-glow-warning' },
+            { icon: Calendar, value: player.dailyQuestsCompleted, label: 'Daily Done', color: 'text-glow-success' },
+            { icon: RotateCcw, value: player.weeklyQuestsCompleted || 0, label: 'Weekly Done', color: 'text-accent' },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="text-center">
+                <div className={`w-10 h-10 rounded-lg bg-secondary mx-auto mb-1 flex items-center justify-center ${item.color}`}>
+                  <Icon size={18} />
+                </div>
+                <p className="font-display text-lg font-bold">{item.value}</p>
+                <p className="text-[10px] text-muted-foreground">{item.label}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
