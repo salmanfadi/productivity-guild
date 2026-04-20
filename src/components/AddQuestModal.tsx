@@ -55,12 +55,6 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
     setManuallyEdited(false);
   };
 
-  const grouped = useMemo(() => {
-    return CATEGORIES.map(cat => ({
-      ...cat,
-      stats: ALL_STATS.filter(s => s.category === cat.key),
-    }));
-  }, []);
 
   if (!open) return null;
 
