@@ -66,6 +66,7 @@ export default {
           d: "hsl(var(--rank-d))",
           e: "hsl(var(--rank-e))",
         },
+        gold: "hsl(var(--glow-gold))",
       },
       borderRadius: {
         lg: "var(--radius)",
