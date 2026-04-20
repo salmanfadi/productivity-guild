@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   type Difficulty, type QuestType, type StatKey,
   getXpReward, getCoinReward, suggestStatRewards, ALL_STATS,
@@ -22,6 +22,11 @@ const CATEGORIES: { key: 'core' | 'secondary' | 'hidden'; label: string }[] = [
   { key: 'secondary', label: 'Secondary' },
   { key: 'hidden', label: 'Hidden' },
 ];
+
+const GROUPED_STATS = CATEGORIES.map(cat => ({
+  ...cat,
+  stats: ALL_STATS.filter(s => s.category === cat.key),
+}));
 
 interface AddQuestModalProps {
   open: boolean;
@@ -55,12 +60,6 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
     setManuallyEdited(false);
   };
 
-  const grouped = useMemo(() => {
-    return CATEGORIES.map(cat => ({
-      ...cat,
-      stats: ALL_STATS.filter(s => s.category === cat.key),
-    }));
-  }, []);
 
   if (!open) return null;
 
@@ -186,7 +185,7 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
           </div>
 
           <div className="space-y-3 bg-secondary/30 border border-border rounded-lg p-3">
-            {grouped.map((g) => (
+            {GROUPED_STATS.map((g) => (
               <div key={g.key}>
                 <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 font-display">
                   {g.label}
