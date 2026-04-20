@@ -86,12 +86,6 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
     });
   };
 
-  const grouped = useMemo(() => {
-    return CATEGORIES.map(cat => ({
-      ...cat,
-      stats: ALL_STATS.filter(s => s.category === cat.key),
-    }));
-  }, []);
 
   const totalStatPoints = Object.values(statRewards).reduce<number>((a, b) => a + (b || 0), 0);
 
