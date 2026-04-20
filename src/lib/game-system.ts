@@ -292,6 +292,8 @@ export function getDefaultState(): PlayerState {
     systemMessages: [
       createSystemMessage('Welcome, Hunter. The System has awakened. Complete quests to grow stronger.', 'info'),
     ],
+    activeRole: 'initiate',
+    unlockedRoles: ['initiate'],
   };
 }
 
@@ -311,6 +313,8 @@ export function loadState(): PlayerState {
       if (!state.weeklyQuestsCompleted) state.weeklyQuestsCompleted = 0;
       if (!state.lastWeeklyReset) state.lastWeeklyReset = Date.now();
       if (!state.systemMessages) state.systemMessages = [];
+      if (!state.unlockedRoles) state.unlockedRoles = ['initiate'];
+      if (!state.activeRole) state.activeRole = 'initiate';
 
       // Migrate old stats to new system
       const defaultStats = getDefaultStats();
