@@ -1,24 +1,24 @@
-import { Scroll, User, Swords, Target, LayoutDashboard, Bell } from 'lucide-react';
+import { Scroll, User, Swords, Target, LayoutDashboard, GitBranch } from 'lucide-react';
 
-export type Tab = 'quests' | 'daily' | 'stats' | 'dashboard' | 'profile';
+export type Tab = 'quests' | 'daily' | 'stats' | 'dashboard' | 'profile' | 'roles';
 
 const TABS: { key: Tab; label: string; icon: typeof Scroll }[] = [
-  { key: 'quests', label: 'Quests', icon: Scroll },
-  { key: 'daily', label: 'Daily', icon: Target },
-  { key: 'dashboard', label: 'Sheet', icon: LayoutDashboard },
-  { key: 'stats', label: 'Stats', icon: Swords },
-  { key: 'profile', label: 'Profile', icon: User },
+  { key: 'quests',    label: 'Quests', icon: Scroll },
+  { key: 'daily',     label: 'Daily',  icon: Target },
+  { key: 'dashboard', label: 'Sheet',  icon: LayoutDashboard },
+  { key: 'roles',     label: 'Roles',  icon: GitBranch },
+  { key: 'stats',     label: 'Stats',  icon: Swords },
+  { key: 'profile',   label: 'You',    icon: User },
 ];
 
 interface BottomNavProps {
   active: Tab;
   onChange: (tab: Tab) => void;
-  hasUnread?: boolean;
 }
 
-export default function BottomNav({ active, onChange, hasUnread }: BottomNavProps) {
+export default function BottomNav({ active, onChange }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-border">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-primary/20">
       <div className="max-w-md mx-auto flex">
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -27,12 +27,22 @@ export default function BottomNav({ active, onChange, hasUnread }: BottomNavProp
             <button
               key={tab.key}
               onClick={() => onChange(tab.key)}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 transition-all relative ${
-                isActive ? 'text-primary' : 'text-muted-foreground'
+              className={`flex-1 flex flex-col items-center gap-1 py-2.5 transition-all relative ${
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
+              aria-label={tab.label}
             >
-              <Icon size={18} className={isActive ? 'drop-shadow-[0_0_6px_hsl(var(--glow-primary)/0.5)]' : ''} />
-              <span className="text-[9px] uppercase tracking-wider font-medium">{tab.label}</span>
+              {/* Active indicator bar */}
+              {isActive && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full glow-primary" />
+              )}
+              <Icon
+                size={18}
+                className={isActive ? 'drop-shadow-[0_0_8px_hsl(var(--glow-primary)/0.7)]' : ''}
+              />
+              <span className="text-[9px] uppercase tracking-wider font-display">
+                {tab.label}
+              </span>
             </button>
           );
         })}

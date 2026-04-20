@@ -81,6 +81,81 @@ export interface PlayerState {
   lastDailyReset: number;
   lastWeeklyReset: number;
   systemMessages: SystemMessage[];
+  activeRole?: string;
+  unlockedRoles?: string[];
+}
+
+// ── ROLE / IDENTITY SYSTEM ──
+export type RoleTier = 'beginner' | 'standard' | 'elite' | 'rare';
+export type RolePath = 'beginner' | 'physical' | 'tech' | 'intelligence' | 'social' | 'discipline' | 'hybrid';
+
+export interface Role {
+  id: string;
+  name: string;
+  tier: RoleTier;
+  path: RolePath;
+  requirements: Partial<Record<StatKey, number>>;
+  description: string;
+}
+
+export const ALL_ROLES: Role[] = [
+  // Beginner
+  { id: 'initiate', name: 'Initiate', tier: 'beginner', path: 'beginner', requirements: {}, description: 'Your journey begins. Complete your first quests.' },
+  { id: 'disciplined-rookie', name: 'Disciplined Rookie', tier: 'beginner', path: 'beginner', requirements: { dis: 15, cons: 10 }, description: 'Showing early signs of consistency.' },
+  { id: 'focused-learner', name: 'Focused Learner', tier: 'beginner', path: 'beginner', requirements: { foc: 20, int: 20 }, description: 'A sharp mind taking shape.' },
+
+  // Physical
+  { id: 'active-individual', name: 'Active Individual', tier: 'standard', path: 'physical', requirements: { str: 20, sta: 20 }, description: 'You move. You sweat. You grow.' },
+  { id: 'athlete', name: 'Athlete', tier: 'standard', path: 'physical', requirements: { str: 50, sta: 50 }, description: 'Disciplined body, tested in motion.' },
+  { id: 'endurance-warrior', name: 'Endurance Warrior', tier: 'elite', path: 'physical', requirements: { sta: 75, dis: 50, hp: 30 }, description: 'Pain is just data.' },
+  { id: 'elite-performer', name: 'Elite Performer', tier: 'elite', path: 'physical', requirements: { str: 80, sta: 80, dis: 60 }, description: 'Top of the human curve.' },
+
+  // Tech
+  { id: 'code-apprentice', name: 'Code Apprentice', tier: 'beginner', path: 'tech', requirements: { tech: 20, int: 20 }, description: 'Hello, world.' },
+  { id: 'developer', name: 'Developer', tier: 'standard', path: 'tech', requirements: { tech: 40, int: 35, foc: 30 }, description: 'You build things that work.' },
+  { id: 'system-builder', name: 'System Builder', tier: 'standard', path: 'tech', requirements: { tech: 55, int: 50, foc: 45 }, description: 'Architectures live in your head.' },
+  { id: 'algorithm-solver', name: 'Algorithm Solver', tier: 'elite', path: 'tech', requirements: { int: 60, tech: 60, foc: 50 }, description: 'Complexity bends to you.' },
+  { id: 'software-engineer', name: 'Software Engineer', tier: 'elite', path: 'tech', requirements: { tech: 70, int: 60, foc: 55, dis: 50 }, description: 'Ship. Iterate. Repeat.' },
+  { id: 'architect', name: 'Architect', tier: 'rare', path: 'tech', requirements: { tech: 85, int: 80, foc: 70, dis: 65 }, description: 'You design the systems others build inside.' },
+
+  // Intelligence
+  { id: 'student', name: 'Student', tier: 'beginner', path: 'intelligence', requirements: { int: 25, foc: 20 }, description: 'Hungry to learn.' },
+  { id: 'analyst', name: 'Analyst', tier: 'standard', path: 'intelligence', requirements: { int: 50, foc: 40 }, description: 'Patterns reveal themselves to you.' },
+  { id: 'strategist', name: 'Strategist', tier: 'elite', path: 'intelligence', requirements: { int: 65, foc: 55, dis: 45 }, description: 'You play three moves ahead.' },
+  { id: 'problem-solver', name: 'Problem Solver', tier: 'elite', path: 'intelligence', requirements: { int: 75, foc: 65, cre: 50 }, description: 'No problem is unsolvable.' },
+
+  // Social
+  { id: 'communicator', name: 'Communicator', tier: 'beginner', path: 'social', requirements: { com: 25, eq: 20 }, description: 'You make ideas clear.' },
+  { id: 'influencer', name: 'Influencer', tier: 'standard', path: 'social', requirements: { com: 50, conf: 45, rep: 25 }, description: 'People listen when you speak.' },
+  { id: 'leader', name: 'Leader', tier: 'elite', path: 'social', requirements: { eq: 60, com: 60, conf: 55, dis: 50 }, description: 'Others rally to your direction.' },
+  { id: 'negotiator', name: 'Negotiator', tier: 'elite', path: 'social', requirements: { eq: 70, com: 65, conf: 60, int: 50 }, description: 'You shape outcomes through dialogue.' },
+
+  // Discipline
+  { id: 'consistent-performer', name: 'Consistent Performer', tier: 'standard', path: 'discipline', requirements: { dis: 50, cons: 50 }, description: 'You show up. Every day.' },
+  { id: 'relentless', name: 'Relentless', tier: 'elite', path: 'discipline', requirements: { dis: 70, cons: 70, res: 40 }, description: 'Stopping is not an option.' },
+  { id: 'unstoppable', name: 'Unstoppable', tier: 'rare', path: 'discipline', requirements: { dis: 85, cons: 85, res: 60, sta: 50 }, description: 'A force of pure will.' },
+
+  // Hybrid / S-rank
+  { id: 'founder', name: 'Founder', tier: 'rare', path: 'hybrid', requirements: { tech: 60, com: 60, conf: 60, dis: 70 }, description: 'You build worlds from nothing.' },
+  { id: 'data-scientist', name: 'Data Scientist', tier: 'rare', path: 'hybrid', requirements: { int: 70, tech: 65, foc: 60 }, description: 'The numbers speak through you.' },
+  { id: 'athlete-programmer', name: 'Athlete Programmer', tier: 'rare', path: 'hybrid', requirements: { str: 50, sta: 50, tech: 60, foc: 50 }, description: 'Body and mind, both sharpened.' },
+  { id: 'strategic-leader', name: 'Strategic Leader', tier: 'rare', path: 'hybrid', requirements: { int: 70, eq: 65, com: 65, dis: 60 }, description: 'You see the board. You move the pieces.' },
+  { id: 'elite-operator', name: 'Elite Operator', tier: 'rare', path: 'hybrid', requirements: { str: 60, int: 60, foc: 60, dis: 60, conf: 55, res: 50 }, description: 'Balanced excellence. The rarest path.' },
+];
+
+export function getRoleProgress(role: Role, stats: HunterStats): number {
+  const reqs = Object.entries(role.requirements);
+  if (reqs.length === 0) return 1;
+  const ratios = reqs.map(([k, need]) => Math.min(stats[k as StatKey] / (need as number), 1));
+  return ratios.reduce((a, b) => a + b, 0) / ratios.length;
+}
+
+export function isRoleUnlocked(role: Role, stats: HunterStats): boolean {
+  return Object.entries(role.requirements).every(([k, need]) => stats[k as StatKey] >= (need as number));
+}
+
+export function getUnlockedRoles(stats: HunterStats): Role[] {
+  return ALL_ROLES.filter(r => isRoleUnlocked(r, stats));
 }
 
 const XP_REWARDS: Record<Difficulty, number> = {
@@ -217,6 +292,8 @@ export function getDefaultState(): PlayerState {
     systemMessages: [
       createSystemMessage('Welcome, Hunter. The System has awakened. Complete quests to grow stronger.', 'info'),
     ],
+    activeRole: 'initiate',
+    unlockedRoles: ['initiate'],
   };
 }
 
@@ -236,6 +313,8 @@ export function loadState(): PlayerState {
       if (!state.weeklyQuestsCompleted) state.weeklyQuestsCompleted = 0;
       if (!state.lastWeeklyReset) state.lastWeeklyReset = Date.now();
       if (!state.systemMessages) state.systemMessages = [];
+      if (!state.unlockedRoles) state.unlockedRoles = ['initiate'];
+      if (!state.activeRole) state.activeRole = 'initiate';
 
       // Migrate old stats to new system
       const defaultStats = getDefaultStats();
