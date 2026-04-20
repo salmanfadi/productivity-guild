@@ -185,7 +185,7 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
           </div>
 
           <div className="space-y-3 bg-secondary/30 border border-border rounded-lg p-3">
-            {grouped.map((g) => (
+            {GROUPED_STATS.map((g) => (
               <div key={g.key}>
                 <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 font-display">
                   {g.label}
