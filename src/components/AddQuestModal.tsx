@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   type Difficulty, type QuestType, type StatKey,
   getXpReward, getCoinReward, suggestStatRewards, ALL_STATS,
