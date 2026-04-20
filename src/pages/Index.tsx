@@ -3,6 +3,7 @@ import {
   type PlayerState, type Difficulty, type StatKey, type QuestType,
   createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getRank, getXpToNext,
   loadState, saveState, maybeGenerateRandomEvent, createSystemMessage,
+  getUnlockedRoles, ALL_ROLES,
 } from '@/lib/game-system';
 import StatusPanel from '@/components/StatusPanel';
 import QuestList from '@/components/QuestList';
@@ -11,6 +12,7 @@ import StatAllocation from '@/components/StatAllocation';
 import LevelUpOverlay from '@/components/LevelUpOverlay';
 import ProfileTab from '@/components/ProfileTab';
 import Dashboard from '@/components/Dashboard';
+import RolesTab from '@/components/RolesTab';
 import SystemMessages from '@/components/SystemMessages';
 import BottomNav, { type Tab } from '@/components/BottomNav';
 import { Plus } from 'lucide-react';
@@ -78,6 +80,20 @@ export default function Index() {
         }
       }
 
+      // Detect newly-unlocked roles
+      const prevUnlocked = new Set(prev.unlockedRoles || []);
+      const nowUnlocked = getUnlockedRoles(newStats).map((r) => r.id);
+      const newlyUnlocked = nowUnlocked.filter((rid) => !prevUnlocked.has(rid));
+      for (const rid of newlyUnlocked) {
+        const role = ALL_ROLES.find((r) => r.id === rid);
+        if (role) {
+          messages.push(createSystemMessage(
+            `🏅 New Identity Unlocked: ${role.name}${role.tier === 'rare' ? ' [S-RANK]' : ''}`,
+            'reward',
+          ));
+        }
+      }
+
       return {
         ...prev,
         xp,
@@ -95,8 +111,13 @@ export default function Index() {
         dailyQuestsCompleted: quest.questType === 'daily' ? prev.dailyQuestsCompleted + 1 : prev.dailyQuestsCompleted,
         weeklyQuestsCompleted: quest.questType === 'weekly' ? (prev.weeklyQuestsCompleted || 0) + 1 : (prev.weeklyQuestsCompleted || 0),
         systemMessages: messages,
+        unlockedRoles: nowUnlocked,
       };
     });
+  };
+
+  const handleSetActiveRole = (roleId: string) => {
+    update((prev) => ({ ...prev, activeRole: roleId }));
   };
 
   const handleAddQuest = (title: string, difficulty: Difficulty, questType: QuestType, statRewards: Partial<Record<StatKey, number>>) => {
