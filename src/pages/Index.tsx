@@ -253,6 +253,14 @@ export default function Index() {
 
           {tab === 'dashboard' && <Dashboard player={player} />}
 
+          {tab === 'roles' && (
+            <RolesTab
+              stats={player.stats}
+              activeRole={player.activeRole}
+              onSetActive={handleSetActiveRole}
+            />
+          )}
+
           {tab === 'stats' && (
             <StatAllocation
               stats={player.stats}
