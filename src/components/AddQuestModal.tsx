@@ -23,6 +23,11 @@ const CATEGORIES: { key: 'core' | 'secondary' | 'hidden'; label: string }[] = [
   { key: 'hidden', label: 'Hidden' },
 ];
 
+const GROUPED_STATS = CATEGORIES.map(cat => ({
+  ...cat,
+  stats: ALL_STATS.filter(s => s.category === cat.key),
+}));
+
 interface AddQuestModalProps {
   open: boolean;
   onClose: () => void;
