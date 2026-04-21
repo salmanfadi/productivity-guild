@@ -4,6 +4,7 @@ import {
   getXpReward, getCoinReward, suggestStatRewards, ALL_STATS,
 } from '@/lib/game-system';
 import { Plus, X, Shield, Zap, Swords, Flame, Coins, Sparkles, Minus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const DIFFICULTIES: { key: Difficulty; label: string; icon: typeof Shield; color: string }[] = [
   { key: 'easy', label: 'Easy', icon: Shield, color: 'glow-success' },
