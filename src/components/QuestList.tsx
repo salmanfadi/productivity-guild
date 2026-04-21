@@ -1,5 +1,6 @@
-import { type Quest, type Difficulty } from '@/lib/game-system';
+import { type Quest, type Difficulty, ALL_STATS } from '@/lib/game-system';
 import { Check, Trash2, Flame, Swords, Shield, Zap, Coins } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const DIFFICULTY_CONFIG: Record<Difficulty, {
   label: string; icon: typeof Flame; barColor: string; iconBg: string;
