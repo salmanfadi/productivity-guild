@@ -69,21 +69,23 @@ export default function QuestList({ quests, onComplete, onDelete, title, emptyTe
                       <Coins size={9} />{quest.coinReward}
                     </span>
                     {statEntries.length > 0 && (
-                      <span className="text-accent truncate">
-                        {statEntries.map(([k, v]) => {
-                          const stat = ALL_STATS.find(s => s.key === k);
-                          return (
-                            <Tooltip key={k}>
-                              <TooltipTrigger asChild>
-                                <span className="cursor-help">+{v}{k}</span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs font-display uppercase tracking-wider">{stat?.fullLabel || k}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          );
-                        }).reduce((prev, curr) => <>{prev} {curr}</> as unknown as React.ReactElement)}
-                      </span>
+                      <TooltipProvider>
+                        <span className="text-accent truncate flex gap-1">
+                          {statEntries.map(([k, v]) => {
+                            const stat = ALL_STATS.find(s => s.key === k);
+                            return (
+                              <Tooltip key={k}>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help hover:text-accent/80 transition-colors">+{v}{k}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs font-display uppercase tracking-wider">{stat?.fullLabel || k}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })}
+                        </span>
+                      </TooltipProvider>
                     )}
                   </div>
                 </div>
