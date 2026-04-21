@@ -185,55 +185,65 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
             </span>
           </div>
 
-          <div className="space-y-3 bg-secondary/30 border border-border rounded-lg p-3">
-            {GROUPED_STATS.map((g) => (
-              <div key={g.key}>
-                <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 font-display">
-                  {g.label}
-                </p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {g.stats.map((s) => {
-                    const val = statRewards[s.key] || 0;
-                    const active = val > 0;
-                    return (
-                      <div
-                        key={s.key}
-                        className={`flex items-center justify-between rounded-md border transition-all px-1.5 py-1 ${
-                          active
-                            ? 'bg-primary/15 border-primary/50'
-                            : 'bg-secondary/60 border-border'
-                        }`}
-                      >
-                        <button
-                          onClick={() => setStat(s.key, val - 1)}
-                          disabled={!active}
-                          className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-20"
-                          aria-label={`Decrease ${s.label}`}
+          <TooltipProvider>
+            <div className="space-y-3 bg-secondary/30 border border-border rounded-lg p-3">
+              {GROUPED_STATS.map((g) => (
+                <div key={g.key}>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 font-display">
+                    {g.label}
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {g.stats.map((s) => {
+                      const val = statRewards[s.key] || 0;
+                      const active = val > 0;
+                      return (
+                        <div
+                          key={s.key}
+                          className={`flex items-center justify-between rounded-md border transition-all px-1.5 py-1 ${
+                            active
+                              ? 'bg-primary/15 border-primary/50'
+                              : 'bg-secondary/60 border-border'
+                          }`}
                         >
-                          <Minus size={10} />
-                        </button>
-                        <div className="flex flex-col items-center leading-none">
-                          <span className={`text-[10px] font-display font-bold ${active ? 'text-primary' : 'text-foreground'}`}>
-                            {s.label}
-                          </span>
-                          <span className="text-[8px] text-muted-foreground mt-0.5">
-                            {active ? `+${val}` : '—'}
-                          </span>
+                          <button
+                            onClick={() => setStat(s.key, val - 1)}
+                            disabled={!active}
+                            className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-20"
+                            aria-label={`Decrease ${s.label}`}
+                          >
+                            <Minus size={10} />
+                          </button>
+                          <div className="flex flex-col items-center leading-none">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`text-[10px] font-display font-bold cursor-help ${active ? 'text-primary' : 'text-foreground'}`}>
+                                  {s.label}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs font-display uppercase tracking-wider">{s.fullLabel}</p>
+                                <p className="text-[10px] text-muted-foreground">{s.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <span className="text-[8px] text-muted-foreground mt-0.5">
+                              {active ? `+${val}` : '—'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => setStat(s.key, val + 1)}
+                            className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-primary"
+                            aria-label={`Increase ${s.label}`}
+                          >
+                            <Plus size={10} />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => setStat(s.key, val + 1)}
-                          className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-primary"
-                          aria-label={`Increase ${s.label}`}
-                        >
-                          <Plus size={10} />
-                        </button>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </TooltipProvider>
         </div>
 
         {/* Rewards preview */}
