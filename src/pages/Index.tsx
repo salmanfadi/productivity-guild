@@ -208,6 +208,26 @@ export default function Index() {
     update((prev) => ({ ...prev, name }));
   };
 
+  const handleSaveCheckIn = (c: DailyCheckIn) => {
+    const wasFirstToday = !daily.history.some(h => h.date === c.date);
+    updateDaily((prev) => upsertCheckIn(prev, c));
+    const result = computeDailyEngine(c);
+    if (wasFirstToday && result.messages.length > 0) {
+      update((prev) => ({
+        ...prev,
+        systemMessages: [...prev.systemMessages, ...result.messages],
+      }));
+    }
+  };
+
+  const handleAcceptRecoveryQuest = (title: string, reward: Partial<Record<StatKey, number>>) => {
+    update((prev) => ({
+      ...prev,
+      quests: [...prev.quests, createQuest(title, 'easy', 'custom', reward)],
+      systemMessages: [...prev.systemMessages, createSystemMessage(`🛡 Recovery quest accepted: ${title}`, 'info')],
+    }));
+  };
+
   const activeQuests = player.quests.filter((q) => q.questType !== 'daily' && q.questType !== 'weekly');
   const dailyQuests = player.quests.filter((q) => q.questType === 'daily');
   const weeklyQuests = player.quests.filter((q) => q.questType === 'weekly');
