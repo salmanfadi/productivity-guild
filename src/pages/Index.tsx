@@ -1,10 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   type PlayerState, type Difficulty, type StatKey, type QuestType,
   createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getRank, getXpToNext,
   loadState, saveState, maybeGenerateRandomEvent, createSystemMessage,
   getUnlockedRoles, ALL_ROLES,
 } from '@/lib/game-system';
+import {
+  type DailyCheckIn, type DailyStore,
+  loadDaily, saveDaily, upsertCheckIn, computeDailyEngine, applyDecay, todayStr,
+} from '@/lib/daily-system';
 import StatusPanel from '@/components/StatusPanel';
 import QuestList from '@/components/QuestList';
 import AddQuestModal from '@/components/AddQuestModal';
@@ -13,12 +17,14 @@ import LevelUpOverlay from '@/components/LevelUpOverlay';
 import ProfileTab from '@/components/ProfileTab';
 import Dashboard from '@/components/Dashboard';
 import RolesTab from '@/components/RolesTab';
+import DailyCheckInTab from '@/components/DailyCheckInTab';
 import SystemMessages from '@/components/SystemMessages';
 import BottomNav, { type Tab } from '@/components/BottomNav';
 import { Plus } from 'lucide-react';
 
 export default function Index() {
   const [player, setPlayer] = useState<PlayerState>(loadState);
+  const [daily, setDaily] = useState<DailyStore>(loadDaily);
   const [tab, setTab] = useState<Tab>('quests');
   const [showAddQuest, setShowAddQuest] = useState(false);
   const [levelUpShow, setLevelUpShow] = useState(false);
@@ -29,6 +35,30 @@ export default function Index() {
       saveState(next);
       return next;
     });
+  }, []);
+
+  const updateDaily = useCallback((updater: (prev: DailyStore) => DailyStore) => {
+    setDaily((prev) => {
+      const next = updater(prev);
+      saveDaily(next);
+      return next;
+    });
+  }, []);
+
+  // Decay check on mount (once per day)
+  useEffect(() => {
+    const today = todayStr();
+    if (daily.lastDecayDate === today) return;
+    const { stats: decayedStats, messages: decayMsgs } = applyDecay(player.stats, daily.history, null);
+    if (decayMsgs.length > 0) {
+      update((prev) => ({
+        ...prev,
+        stats: decayedStats,
+        systemMessages: [...prev.systemMessages, ...decayMsgs],
+      }));
+    }
+    updateDaily((prev) => ({ ...prev, lastDecayDate: today }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCompleteQuest = (id: string) => {
