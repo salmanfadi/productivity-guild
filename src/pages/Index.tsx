@@ -301,6 +301,14 @@ export default function Index() {
             </>
           )}
 
+          {tab === 'checkin' && (
+            <DailyCheckInTab
+              store={daily}
+              onSave={handleSaveCheckIn}
+              onAcceptRecoveryQuest={handleAcceptRecoveryQuest}
+            />
+          )}
+
           {tab === 'dashboard' && <Dashboard player={player} />}
 
           {tab === 'roles' && (
