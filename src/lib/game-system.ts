@@ -250,15 +250,41 @@ export function createQuest(
   difficulty: Difficulty,
   questType: QuestType = 'custom',
   statRewards: Partial<Record<StatKey, number>> = {},
+  category?: QuestCategory,
+  mainQuestId?: string,
 ): Quest {
   return {
     id: crypto.randomUUID(),
     title,
     difficulty,
     questType,
+    category: category ?? suggestCategory(title),
     xpReward: XP_REWARDS[difficulty],
     coinReward: COIN_REWARDS[difficulty],
     statRewards,
+    completed: false,
+    createdAt: Date.now(),
+    mainQuestId,
+  };
+}
+
+export function createMainQuest(
+  title: string,
+  subTitles: string[],
+  category?: QuestCategory,
+  description?: string,
+): MainQuest {
+  return {
+    id: crypto.randomUUID(),
+    title,
+    description,
+    category: category ?? suggestCategory(title),
+    subquests: subTitles.filter(t => t.trim()).map(t => ({
+      id: crypto.randomUUID(),
+      title: t.trim(),
+      done: false,
+    })),
+    xpReward: 250 + subTitles.length * 50,
     completed: false,
     createdAt: Date.now(),
   };
@@ -266,17 +292,17 @@ export function createQuest(
 
 export function getDailyQuests(): Quest[] {
   return [
-    createQuest('Complete 3 tasks today', 'medium', 'daily', { dis: 1, foc: 1 }),
-    createQuest('Review your goals', 'easy', 'daily', { int: 1 }),
-    createQuest('Focus session (25 min)', 'hard', 'daily', { foc: 2, dis: 1 }),
+    createQuest('Complete 3 tasks today', 'medium', 'daily', { dis: 1, foc: 1 }, 'mindfulness'),
+    createQuest('Review your goals', 'easy', 'daily', { int: 1 }, 'study'),
+    createQuest('Focus session (25 min)', 'hard', 'daily', { foc: 2, dis: 1 }, 'study'),
   ];
 }
 
 export function getWeeklyQuests(): Quest[] {
   return [
-    createQuest('Complete all daily quests 5 days', 'boss', 'weekly', { cons: 3, dis: 2 }),
-    createQuest('Learn something new', 'hard', 'weekly', { int: 2, tech: 1 }),
-    createQuest('Exercise 3 times', 'hard', 'weekly', { str: 2, sta: 2 }),
+    createQuest('Complete all daily quests 5 days', 'boss', 'weekly', { cons: 3, dis: 2 }, 'mindfulness'),
+    createQuest('Learn something new', 'hard', 'weekly', { int: 2, tech: 1 }, 'study'),
+    createQuest('Exercise 3 times', 'hard', 'weekly', { str: 2, sta: 2 }, 'fitness'),
   ];
 }
 
