@@ -33,7 +33,7 @@ const GROUPED_STATS = CATEGORIES.map(cat => ({
 interface AddQuestModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (title: string, difficulty: Difficulty, questType: QuestType, statRewards: Partial<Record<StatKey, number>>) => void;
+  onAdd: (title: string, difficulty: Difficulty, questType: QuestType, statRewards: Partial<Record<StatKey, number>>, category: QuestCategory | undefined) => void;
 }
 
 export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalProps) {
@@ -42,6 +42,8 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
   const [questType, setQuestType] = useState<QuestType>('custom');
   const [statRewards, setStatRewards] = useState<Partial<Record<StatKey, number>>>({});
   const [manuallyEdited, setManuallyEdited] = useState(false);
+  const [category, setCategory] = useState<QuestCategory | undefined>(undefined);
+  const [categoryAuto, setCategoryAuto] = useState(true);
 
   // Auto-suggest stats based on title — but only if user hasn't manually picked
   useEffect(() => {
