@@ -42,14 +42,57 @@ export const ALL_STATS: StatInfo[] = [
 
 export type HunterStats = Record<StatKey, number>;
 
+// ── Quest Categories ──
+export type QuestCategory =
+  | 'fitness' | 'coding' | 'study' | 'career'
+  | 'social' | 'mindfulness' | 'creative' | 'health';
+
+export interface CategoryInfo {
+  key: QuestCategory;
+  label: string;
+  emoji: string;
+  primaryStats: StatKey[];
+}
+
+export const QUEST_CATEGORIES: CategoryInfo[] = [
+  { key: 'fitness',     label: 'Fitness',     emoji: '💪', primaryStats: ['str', 'sta'] },
+  { key: 'coding',      label: 'Coding',      emoji: '💻', primaryStats: ['tech', 'int'] },
+  { key: 'study',       label: 'Study',       emoji: '📚', primaryStats: ['int', 'foc'] },
+  { key: 'career',      label: 'Career',      emoji: '🎯', primaryStats: ['conf', 'rep'] },
+  { key: 'social',      label: 'Social',      emoji: '🗣', primaryStats: ['com', 'eq'] },
+  { key: 'mindfulness', label: 'Mindfulness', emoji: '🧘', primaryStats: ['eq', 'res'] },
+  { key: 'creative',    label: 'Creative',    emoji: '🎨', primaryStats: ['cre', 'com'] },
+  { key: 'health',      label: 'Health',      emoji: '🩺', primaryStats: ['hp', 'sta'] },
+];
+
 export interface Quest {
   id: string;
   title: string;
   difficulty: Difficulty;
   questType: QuestType;
+  category?: QuestCategory;
   xpReward: number;
   coinReward: number;
   statRewards: Partial<Record<StatKey, number>>;
+  completed: boolean;
+  createdAt: number;
+  mainQuestId?: string;
+}
+
+// ── Main Quests ──
+export interface MainQuestSub {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
+export interface MainQuest {
+  id: string;
+  title: string;
+  description?: string;
+  category?: QuestCategory;
+  subquests: MainQuestSub[];
+  xpReward: number;
   completed: boolean;
   createdAt: number;
 }
@@ -71,10 +114,11 @@ export interface PlayerState {
   stats: HunterStats;
   statPoints: number;
   quests: Quest[];
+  mainQuests: MainQuest[];
   coins: number;
   streak: number;
   bestStreak: number;
-  lastActiveDate: string; // YYYY-MM-DD
+  lastActiveDate: string;
   totalQuestsCompleted: number;
   dailyQuestsCompleted: number;
   weeklyQuestsCompleted: number;
