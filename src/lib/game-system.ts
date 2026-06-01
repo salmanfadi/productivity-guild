@@ -420,11 +420,15 @@ export function loadState(): PlayerState {
         state.lastActiveDate = today;
       }
 
-      // Daily reset
+      // Daily reset — auto-generate fresh dailies + bump streak handling
       if (now.toDateString() !== last.toDateString()) {
         state.quests = state.quests.filter(q => q.questType !== 'daily');
+        state.quests.push(...getDailyQuests());
         state.dailyQuestsCompleted = 0;
         state.lastDailyReset = Date.now();
+        state.systemMessages.push(
+          createSystemMessage('🌅 A new day dawns, Hunter. Fresh daily quests have appeared.', 'event'),
+        );
       }
 
       // Weekly reset (Monday)
