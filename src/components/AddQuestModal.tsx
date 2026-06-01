@@ -162,6 +162,43 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
           ))}
         </div>
 
+        {/* Category */}
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] block font-display">
+            Category
+            {categoryAuto && category && (
+              <span className="ml-1.5 text-primary normal-case tracking-normal">· auto</span>
+            )}
+          </label>
+          {category && (
+            <button
+              onClick={() => { setCategory(undefined); setCategoryAuto(false); }}
+              className="text-[9px] text-muted-foreground hover:text-foreground uppercase tracking-wider"
+            >
+              clear
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-4 gap-1.5 mb-5">
+          {QUEST_CATEGORIES.map((c) => {
+            const selected = category === c.key;
+            return (
+              <button
+                key={c.key}
+                onClick={() => { setCategory(c.key); setCategoryAuto(false); }}
+                className={`flex flex-col items-center gap-0.5 py-2 rounded-lg text-[10px] font-display uppercase tracking-wider transition-all border ${
+                  selected
+                    ? 'bg-accent/15 text-accent border-accent/50 glow-accent'
+                    : 'bg-secondary/60 text-muted-foreground border-border hover:border-accent/30'
+                }`}
+              >
+                <span className="text-sm leading-none">{c.emoji}</span>
+                <span className="text-[8px]">{c.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Difficulty */}
         <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 block font-display">Difficulty</label>
         <div className="grid grid-cols-4 gap-2 mb-5">
