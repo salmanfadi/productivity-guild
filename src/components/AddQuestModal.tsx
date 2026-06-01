@@ -56,12 +56,24 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
     }
   }, [title, manuallyEdited]);
 
+  // Auto-suggest category from title
+  useEffect(() => {
+    if (!categoryAuto) return;
+    if (title.length > 3) {
+      setCategory(suggestCategory(title));
+    } else {
+      setCategory(undefined);
+    }
+  }, [title, categoryAuto]);
+
   const reset = () => {
     setTitle('');
     setDifficulty('medium');
     setQuestType('custom');
     setStatRewards({});
     setManuallyEdited(false);
+    setCategory(undefined);
+    setCategoryAuto(true);
   };
 
 
@@ -69,7 +81,7 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
 
   const handleSubmit = () => {
     if (!title.trim()) return;
-    onAdd(title.trim(), difficulty, questType, statRewards);
+    onAdd(title.trim(), difficulty, questType, statRewards, category);
     reset();
     onClose();
   };
