@@ -347,6 +347,17 @@ export default function Index() {
             </>
           )}
 
+          {tab === 'mains' && (
+            <MainQuestsTab
+              mainQuests={player.mainQuests || []}
+              onCreate={handleCreateMainQuest}
+              onToggleSub={handleToggleSubquest}
+              onDelete={handleDeleteMainQuest}
+            />
+          )}
+
+
+
           {tab === 'daily' && (
             <>
               {dailyQuests.length === 0 && (
