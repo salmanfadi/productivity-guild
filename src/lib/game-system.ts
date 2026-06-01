@@ -473,3 +473,30 @@ export function suggestStatRewards(title: string): Partial<Record<StatKey, numbe
   }
   return {};
 }
+
+// Category keyword inference
+const CATEGORY_SUGGESTIONS: { keywords: string[]; category: QuestCategory }[] = [
+  { keywords: ['gym', 'workout', 'exercise', 'push-up', 'run', 'lift', 'cardio', 'yoga'], category: 'fitness' },
+  { keywords: ['leetcode', 'dsa', 'algorithm', 'code', 'program', 'debug', 'commit', 'pr ', 'pull request'], category: 'coding' },
+  { keywords: ['read', 'study', 'learn', 'course', 'book', 'lecture', 'notes', 'revise'], category: 'study' },
+  { keywords: ['interview', 'resume', 'apply', 'linkedin', 'recruiter', 'placement', 'internship'], category: 'career' },
+  { keywords: ['meet', 'network', 'talk', 'call', 'message', 'friend', 'family'], category: 'social' },
+  { keywords: ['meditat', 'journal', 'reflect', 'breath', 'mindful', 'gratitude'], category: 'mindfulness' },
+  { keywords: ['design', 'create', 'art', 'write', 'blog', 'draw', 'music', 'video'], category: 'creative' },
+  { keywords: ['sleep', 'rest', 'recover', 'water', 'hydrat', 'doctor', 'meal', 'eat'], category: 'health' },
+  { keywords: ['focus', 'pomodoro', 'deep work'], category: 'study' },
+  { keywords: ['project', 'build', 'ship', 'deploy'], category: 'coding' },
+];
+
+export function suggestCategory(title: string): QuestCategory | undefined {
+  const lower = title.toLowerCase();
+  for (const s of CATEGORY_SUGGESTIONS) {
+    if (s.keywords.some(k => lower.includes(k))) return s.category;
+  }
+  return undefined;
+}
+
+export function getCategoryInfo(key?: QuestCategory): CategoryInfo | undefined {
+  if (!key) return undefined;
+  return QUEST_CATEGORIES.find(c => c.key === key);
+}
