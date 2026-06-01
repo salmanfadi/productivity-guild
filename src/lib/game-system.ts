@@ -342,6 +342,7 @@ export function maybeGenerateRandomEvent(): SystemMessage | null {
 
 export function getDefaultState(): PlayerState {
   return {
+    mainQuests: [],
     name: 'Hunter',
     level: 1,
     xp: 0,
