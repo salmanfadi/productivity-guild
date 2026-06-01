@@ -152,10 +152,16 @@ export default function Index() {
     update((prev) => ({ ...prev, activeRole: roleId }));
   };
 
-  const handleAddQuest = (title: string, difficulty: Difficulty, questType: QuestType, statRewards: Partial<Record<StatKey, number>>) => {
+  const handleAddQuest = (
+    title: string,
+    difficulty: Difficulty,
+    questType: QuestType,
+    statRewards: Partial<Record<StatKey, number>>,
+    category: QuestCategory | undefined,
+  ) => {
     update((prev) => ({
       ...prev,
-      quests: [...prev.quests, createQuest(title, difficulty, questType, statRewards)],
+      quests: [...prev.quests, createQuest(title, difficulty, questType, statRewards, category)],
     }));
   };
 
@@ -164,6 +170,83 @@ export default function Index() {
       ...prev,
       quests: prev.quests.filter((q) => q.id !== id),
     }));
+  };
+
+  // ── Main Quest handlers ──
+  const handleCreateMainQuest = (mq: MainQuest) => {
+    update((prev) => ({
+      ...prev,
+      mainQuests: [mq, ...(prev.mainQuests || [])],
+      systemMessages: [
+        ...prev.systemMessages,
+        createSystemMessage(`👑 New Main Quest: ${mq.title}`, 'event'),
+      ],
+    }));
+  };
+
+  const handleDeleteMainQuest = (id: string) => {
+    update((prev) => ({
+      ...prev,
+      mainQuests: (prev.mainQuests || []).filter((m) => m.id !== id),
+    }));
+  };
+
+  const handleToggleSubquest = (mqId: string, subId: string) => {
+    update((prev) => {
+      const mqList = prev.mainQuests || [];
+      const mq = mqList.find((m) => m.id === mqId);
+      if (!mq) return prev;
+      const sub = mq.subquests.find((s) => s.id === subId);
+      if (!sub) return prev;
+
+      const wasDone = sub.done;
+      const updatedSubs = mq.subquests.map((s) => (s.id === subId ? { ...s, done: !s.done } : s));
+      const allDone = updatedSubs.every((s) => s.done);
+      const wasAllDone = mq.subquests.every((s) => s.done);
+
+      // XP per sub toggle (only on completion, not on un-toggle)
+      let xp = prev.xp;
+      let level = prev.level;
+      let xpToNext = prev.xpToNext;
+      let statPoints = prev.statPoints;
+      const newStats = { ...prev.stats };
+      const messages = [...prev.systemMessages];
+
+      if (!wasDone) {
+        xp += 10;
+        newStats.dis = (newStats.dis || 0) + 1;
+      }
+
+      // Final bonus on completing the whole arc
+      if (allDone && !wasAllDone) {
+        xp += mq.xpReward;
+        messages.push(
+          createSystemMessage(`🏆 Main Quest complete: ${mq.title} (+${mq.xpReward} XP)`, 'reward'),
+        );
+      }
+
+      while (xp >= xpToNext) {
+        xp -= xpToNext;
+        level++;
+        xpToNext = getXpToNext(level);
+        statPoints += 3;
+        setLevelUpShow(true);
+      }
+
+      return {
+        ...prev,
+        xp,
+        level,
+        xpToNext,
+        statPoints,
+        stats: newStats,
+        rank: getRank(level),
+        systemMessages: messages,
+        mainQuests: mqList.map((m) =>
+          m.id === mqId ? { ...m, subquests: updatedSubs, completed: allDone } : m,
+        ),
+      };
+    });
   };
 
   const handleAllocateStat = (stat: StatKey) => {
