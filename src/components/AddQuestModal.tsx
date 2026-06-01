@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-  type Difficulty, type QuestType, type StatKey,
-  getXpReward, getCoinReward, suggestStatRewards, ALL_STATS,
+  type Difficulty, type QuestType, type StatKey, type QuestCategory,
+  getXpReward, getCoinReward, suggestStatRewards, suggestCategory,
+  ALL_STATS, QUEST_CATEGORIES,
 } from '@/lib/game-system';
 import { Plus, X, Shield, Zap, Swords, Flame, Coins, Sparkles, Minus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
