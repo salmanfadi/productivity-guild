@@ -1,4 +1,4 @@
-import { type Quest, type Difficulty, ALL_STATS } from '@/lib/game-system';
+import { type Quest, type Difficulty, ALL_STATS, getCategoryInfo } from '@/lib/game-system';
 import { Check, Trash2, Flame, Swords, Shield, Zap, Coins } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
