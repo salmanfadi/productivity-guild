@@ -386,6 +386,12 @@ export function loadState(): PlayerState {
       if (!state.systemMessages) state.systemMessages = [];
       if (!state.unlockedRoles) state.unlockedRoles = ['initiate'];
       if (!state.activeRole) state.activeRole = 'initiate';
+      if (!state.mainQuests) state.mainQuests = [];
+
+      // Backfill category on existing quests
+      for (const q of state.quests) {
+        if (!q.category) q.category = suggestCategory(q.title);
+      }
 
       // Migrate old stats to new system
       const defaultStats = getDefaultStats();
