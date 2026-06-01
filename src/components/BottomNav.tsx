@@ -1,9 +1,10 @@
-import { Scroll, User, Swords, Target, LayoutDashboard, GitBranch, HeartPulse } from 'lucide-react';
+import { Scroll, User, Swords, Target, LayoutDashboard, GitBranch, HeartPulse, Crown } from 'lucide-react';
 
-export type Tab = 'quests' | 'daily' | 'checkin' | 'stats' | 'dashboard' | 'profile' | 'roles';
+export type Tab = 'quests' | 'mains' | 'daily' | 'checkin' | 'stats' | 'dashboard' | 'profile' | 'roles';
 
 const TABS: { key: Tab; label: string; icon: typeof Scroll }[] = [
   { key: 'quests',    label: 'Quests', icon: Scroll },
+  { key: 'mains',     label: 'Mains',  icon: Crown },
   { key: 'daily',     label: 'Daily',  icon: Target },
   { key: 'checkin',   label: 'Vitals', icon: HeartPulse },
   { key: 'dashboard', label: 'Sheet',  icon: LayoutDashboard },

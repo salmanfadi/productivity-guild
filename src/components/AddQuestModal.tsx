@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-  type Difficulty, type QuestType, type StatKey,
-  getXpReward, getCoinReward, suggestStatRewards, ALL_STATS,
+  type Difficulty, type QuestType, type StatKey, type QuestCategory,
+  getXpReward, getCoinReward, suggestStatRewards, suggestCategory,
+  ALL_STATS, QUEST_CATEGORIES,
 } from '@/lib/game-system';
 import { Plus, X, Shield, Zap, Swords, Flame, Coins, Sparkles, Minus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,7 +33,7 @@ const GROUPED_STATS = CATEGORIES.map(cat => ({
 interface AddQuestModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (title: string, difficulty: Difficulty, questType: QuestType, statRewards: Partial<Record<StatKey, number>>) => void;
+  onAdd: (title: string, difficulty: Difficulty, questType: QuestType, statRewards: Partial<Record<StatKey, number>>, category: QuestCategory | undefined) => void;
 }
 
 export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalProps) {
@@ -41,6 +42,8 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
   const [questType, setQuestType] = useState<QuestType>('custom');
   const [statRewards, setStatRewards] = useState<Partial<Record<StatKey, number>>>({});
   const [manuallyEdited, setManuallyEdited] = useState(false);
+  const [category, setCategory] = useState<QuestCategory | undefined>(undefined);
+  const [categoryAuto, setCategoryAuto] = useState(true);
 
   // Auto-suggest stats based on title — but only if user hasn't manually picked
   useEffect(() => {
@@ -53,12 +56,24 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
     }
   }, [title, manuallyEdited]);
 
+  // Auto-suggest category from title
+  useEffect(() => {
+    if (!categoryAuto) return;
+    if (title.length > 3) {
+      setCategory(suggestCategory(title));
+    } else {
+      setCategory(undefined);
+    }
+  }, [title, categoryAuto]);
+
   const reset = () => {
     setTitle('');
     setDifficulty('medium');
     setQuestType('custom');
     setStatRewards({});
     setManuallyEdited(false);
+    setCategory(undefined);
+    setCategoryAuto(true);
   };
 
 
@@ -66,7 +81,7 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
 
   const handleSubmit = () => {
     if (!title.trim()) return;
-    onAdd(title.trim(), difficulty, questType, statRewards);
+    onAdd(title.trim(), difficulty, questType, statRewards, category);
     reset();
     onClose();
   };
@@ -145,6 +160,43 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
               {t.label}
             </button>
           ))}
+        </div>
+
+        {/* Category */}
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] block font-display">
+            Category
+            {categoryAuto && category && (
+              <span className="ml-1.5 text-primary normal-case tracking-normal">· auto</span>
+            )}
+          </label>
+          {category && (
+            <button
+              onClick={() => { setCategory(undefined); setCategoryAuto(false); }}
+              className="text-[9px] text-muted-foreground hover:text-foreground uppercase tracking-wider"
+            >
+              clear
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-4 gap-1.5 mb-5">
+          {QUEST_CATEGORIES.map((c) => {
+            const selected = category === c.key;
+            return (
+              <button
+                key={c.key}
+                onClick={() => { setCategory(c.key); setCategoryAuto(false); }}
+                className={`flex flex-col items-center gap-0.5 py-2 rounded-lg text-[10px] font-display uppercase tracking-wider transition-all border ${
+                  selected
+                    ? 'bg-accent/15 text-accent border-accent/50 glow-accent'
+                    : 'bg-secondary/60 text-muted-foreground border-border hover:border-accent/30'
+                }`}
+              >
+                <span className="text-sm leading-none">{c.emoji}</span>
+                <span className="text-[8px]">{c.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Difficulty */}

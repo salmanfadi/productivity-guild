@@ -42,14 +42,57 @@ export const ALL_STATS: StatInfo[] = [
 
 export type HunterStats = Record<StatKey, number>;
 
+// ── Quest Categories ──
+export type QuestCategory =
+  | 'fitness' | 'coding' | 'study' | 'career'
+  | 'social' | 'mindfulness' | 'creative' | 'health';
+
+export interface CategoryInfo {
+  key: QuestCategory;
+  label: string;
+  emoji: string;
+  primaryStats: StatKey[];
+}
+
+export const QUEST_CATEGORIES: CategoryInfo[] = [
+  { key: 'fitness',     label: 'Fitness',     emoji: '💪', primaryStats: ['str', 'sta'] },
+  { key: 'coding',      label: 'Coding',      emoji: '💻', primaryStats: ['tech', 'int'] },
+  { key: 'study',       label: 'Study',       emoji: '📚', primaryStats: ['int', 'foc'] },
+  { key: 'career',      label: 'Career',      emoji: '🎯', primaryStats: ['conf', 'rep'] },
+  { key: 'social',      label: 'Social',      emoji: '🗣', primaryStats: ['com', 'eq'] },
+  { key: 'mindfulness', label: 'Mindfulness', emoji: '🧘', primaryStats: ['eq', 'res'] },
+  { key: 'creative',    label: 'Creative',    emoji: '🎨', primaryStats: ['cre', 'com'] },
+  { key: 'health',      label: 'Health',      emoji: '🩺', primaryStats: ['hp', 'sta'] },
+];
+
 export interface Quest {
   id: string;
   title: string;
   difficulty: Difficulty;
   questType: QuestType;
+  category?: QuestCategory;
   xpReward: number;
   coinReward: number;
   statRewards: Partial<Record<StatKey, number>>;
+  completed: boolean;
+  createdAt: number;
+  mainQuestId?: string;
+}
+
+// ── Main Quests ──
+export interface MainQuestSub {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
+export interface MainQuest {
+  id: string;
+  title: string;
+  description?: string;
+  category?: QuestCategory;
+  subquests: MainQuestSub[];
+  xpReward: number;
   completed: boolean;
   createdAt: number;
 }
@@ -71,10 +114,11 @@ export interface PlayerState {
   stats: HunterStats;
   statPoints: number;
   quests: Quest[];
+  mainQuests: MainQuest[];
   coins: number;
   streak: number;
   bestStreak: number;
-  lastActiveDate: string; // YYYY-MM-DD
+  lastActiveDate: string;
   totalQuestsCompleted: number;
   dailyQuestsCompleted: number;
   weeklyQuestsCompleted: number;
@@ -206,15 +250,41 @@ export function createQuest(
   difficulty: Difficulty,
   questType: QuestType = 'custom',
   statRewards: Partial<Record<StatKey, number>> = {},
+  category?: QuestCategory,
+  mainQuestId?: string,
 ): Quest {
   return {
     id: crypto.randomUUID(),
     title,
     difficulty,
     questType,
+    category: category ?? suggestCategory(title),
     xpReward: XP_REWARDS[difficulty],
     coinReward: COIN_REWARDS[difficulty],
     statRewards,
+    completed: false,
+    createdAt: Date.now(),
+    mainQuestId,
+  };
+}
+
+export function createMainQuest(
+  title: string,
+  subTitles: string[],
+  category?: QuestCategory,
+  description?: string,
+): MainQuest {
+  return {
+    id: crypto.randomUUID(),
+    title,
+    description,
+    category: category ?? suggestCategory(title),
+    subquests: subTitles.filter(t => t.trim()).map(t => ({
+      id: crypto.randomUUID(),
+      title: t.trim(),
+      done: false,
+    })),
+    xpReward: 250 + subTitles.length * 50,
     completed: false,
     createdAt: Date.now(),
   };
@@ -222,17 +292,17 @@ export function createQuest(
 
 export function getDailyQuests(): Quest[] {
   return [
-    createQuest('Complete 3 tasks today', 'medium', 'daily', { dis: 1, foc: 1 }),
-    createQuest('Review your goals', 'easy', 'daily', { int: 1 }),
-    createQuest('Focus session (25 min)', 'hard', 'daily', { foc: 2, dis: 1 }),
+    createQuest('Complete 3 tasks today', 'medium', 'daily', { dis: 1, foc: 1 }, 'mindfulness'),
+    createQuest('Review your goals', 'easy', 'daily', { int: 1 }, 'study'),
+    createQuest('Focus session (25 min)', 'hard', 'daily', { foc: 2, dis: 1 }, 'study'),
   ];
 }
 
 export function getWeeklyQuests(): Quest[] {
   return [
-    createQuest('Complete all daily quests 5 days', 'boss', 'weekly', { cons: 3, dis: 2 }),
-    createQuest('Learn something new', 'hard', 'weekly', { int: 2, tech: 1 }),
-    createQuest('Exercise 3 times', 'hard', 'weekly', { str: 2, sta: 2 }),
+    createQuest('Complete all daily quests 5 days', 'boss', 'weekly', { cons: 3, dis: 2 }, 'mindfulness'),
+    createQuest('Learn something new', 'hard', 'weekly', { int: 2, tech: 1 }, 'study'),
+    createQuest('Exercise 3 times', 'hard', 'weekly', { str: 2, sta: 2 }, 'fitness'),
   ];
 }
 
@@ -272,6 +342,7 @@ export function maybeGenerateRandomEvent(): SystemMessage | null {
 
 export function getDefaultState(): PlayerState {
   return {
+    mainQuests: [],
     name: 'Hunter',
     level: 1,
     xp: 0,
@@ -315,6 +386,12 @@ export function loadState(): PlayerState {
       if (!state.systemMessages) state.systemMessages = [];
       if (!state.unlockedRoles) state.unlockedRoles = ['initiate'];
       if (!state.activeRole) state.activeRole = 'initiate';
+      if (!state.mainQuests) state.mainQuests = [];
+
+      // Backfill category on existing quests
+      for (const q of state.quests) {
+        if (!q.category) q.category = suggestCategory(q.title);
+      }
 
       // Migrate old stats to new system
       const defaultStats = getDefaultStats();
@@ -343,11 +420,15 @@ export function loadState(): PlayerState {
         state.lastActiveDate = today;
       }
 
-      // Daily reset
+      // Daily reset — auto-generate fresh dailies + bump streak handling
       if (now.toDateString() !== last.toDateString()) {
         state.quests = state.quests.filter(q => q.questType !== 'daily');
+        state.quests.push(...getDailyQuests());
         state.dailyQuestsCompleted = 0;
         state.lastDailyReset = Date.now();
+        state.systemMessages.push(
+          createSystemMessage('🌅 A new day dawns, Hunter. Fresh daily quests have appeared.', 'event'),
+        );
       }
 
       // Weekly reset (Monday)
@@ -391,4 +472,31 @@ export function suggestStatRewards(title: string): Partial<Record<StatKey, numbe
     }
   }
   return {};
+}
+
+// Category keyword inference
+const CATEGORY_SUGGESTIONS: { keywords: string[]; category: QuestCategory }[] = [
+  { keywords: ['gym', 'workout', 'exercise', 'push-up', 'run', 'lift', 'cardio', 'yoga'], category: 'fitness' },
+  { keywords: ['leetcode', 'dsa', 'algorithm', 'code', 'program', 'debug', 'commit', 'pr ', 'pull request'], category: 'coding' },
+  { keywords: ['read', 'study', 'learn', 'course', 'book', 'lecture', 'notes', 'revise'], category: 'study' },
+  { keywords: ['interview', 'resume', 'apply', 'linkedin', 'recruiter', 'placement', 'internship'], category: 'career' },
+  { keywords: ['meet', 'network', 'talk', 'call', 'message', 'friend', 'family'], category: 'social' },
+  { keywords: ['meditat', 'journal', 'reflect', 'breath', 'mindful', 'gratitude'], category: 'mindfulness' },
+  { keywords: ['design', 'create', 'art', 'write', 'blog', 'draw', 'music', 'video'], category: 'creative' },
+  { keywords: ['sleep', 'rest', 'recover', 'water', 'hydrat', 'doctor', 'meal', 'eat'], category: 'health' },
+  { keywords: ['focus', 'pomodoro', 'deep work'], category: 'study' },
+  { keywords: ['project', 'build', 'ship', 'deploy'], category: 'coding' },
+];
+
+export function suggestCategory(title: string): QuestCategory | undefined {
+  const lower = title.toLowerCase();
+  for (const s of CATEGORY_SUGGESTIONS) {
+    if (s.keywords.some(k => lower.includes(k))) return s.category;
+  }
+  return undefined;
+}
+
+export function getCategoryInfo(key?: QuestCategory): CategoryInfo | undefined {
+  if (!key) return undefined;
+  return QUEST_CATEGORIES.find(c => c.key === key);
 }

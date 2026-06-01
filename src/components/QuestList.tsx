@@ -1,4 +1,4 @@
-import { type Quest, type Difficulty, ALL_STATS } from '@/lib/game-system';
+import { type Quest, type Difficulty, ALL_STATS, getCategoryInfo } from '@/lib/game-system';
 import { Check, Trash2, Flame, Swords, Shield, Zap, Coins } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -63,7 +63,15 @@ export default function QuestList({ quests, onComplete, onDelete, title, emptyTe
                   <p className={`text-sm font-medium truncate ${quest.completed ? 'line-through text-muted-foreground' : ''}`}>
                     {quest.title}
                   </p>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-display uppercase tracking-wider mt-0.5">
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-display uppercase tracking-wider mt-0.5 flex-wrap">
+                    {quest.category && (() => {
+                      const c = getCategoryInfo(quest.category);
+                      return c ? (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/30 text-[9px]">
+                          <span>{c.emoji}</span>{c.label}
+                        </span>
+                      ) : null;
+                    })()}
                     <span className="text-primary">+{quest.xpReward}xp</span>
                     <span className="flex items-center gap-0.5 text-glow-warning">
                       <Coins size={9} />{quest.coinReward}
