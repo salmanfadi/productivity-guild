@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
-  type PlayerState, type Difficulty, type StatKey, type QuestType,
+  type PlayerState, type Difficulty, type StatKey, type QuestType, type QuestCategory,
+  type MainQuest,
   createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getRank, getXpToNext,
   loadState, saveState, maybeGenerateRandomEvent, createSystemMessage,
   getUnlockedRoles, ALL_ROLES,
@@ -17,6 +18,7 @@ import LevelUpOverlay from '@/components/LevelUpOverlay';
 import ProfileTab from '@/components/ProfileTab';
 import Dashboard from '@/components/Dashboard';
 import RolesTab from '@/components/RolesTab';
+import MainQuestsTab from '@/components/MainQuestsTab';
 import DailyCheckInTab from '@/components/DailyCheckInTab';
 import SystemMessages from '@/components/SystemMessages';
 import BottomNav, { type Tab } from '@/components/BottomNav';
