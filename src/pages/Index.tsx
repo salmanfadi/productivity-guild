@@ -348,11 +348,6 @@ export default function Index() {
                 title="Active Quests"
                 emptyText="No quests yet. Accept a new quest!"
               />
-              <button
-                onClick={() => setShowAddQuest(true)}
-                className="w-full mt-3 py-3 rounded-lg border border-dashed border-border text-muted-foreground text-sm flex items-center justify-center gap-2 hover:border-primary hover:text-primary transition-colors"
-              >
-                <Plus size={16} />
             <>
               <QuestList
                 quests={activeQuests}
