@@ -272,10 +272,7 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
                                 <Minus size={10} />
                               </button>
                               <div className="flex min-w-0 flex-1 flex-col items-center text-center leading-none">
-                                <span className="text-[9px] font-bold">
-                                  {s.label.toUpperCase()}
-                                </span>
-                                <span className="mt-1 max-w-full truncate text-[8px] font-semibold opacity-70 min-[380px]:hidden">
+                                <span className="max-w-full truncate text-[8px] font-bold uppercase min-[380px]:text-[9px]">
                                   {s.fullLabel}
                                 </span>
                                 <span className="text-[8px] mt-1 opacity-80">
