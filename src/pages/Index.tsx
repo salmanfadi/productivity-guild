@@ -20,6 +20,7 @@ import Dashboard from '@/components/Dashboard';
 import RolesTab from '@/components/RolesTab';
 import MainQuestsTab from '@/components/MainQuestsTab';
 import DailyCheckInTab from '@/components/DailyCheckInTab';
+import HomeTab from '@/components/HomeTab';
 import SystemMessages from '@/components/SystemMessages';
 import BottomNav, { type Tab } from '@/components/BottomNav';
 import { Plus } from 'lucide-react';
@@ -27,7 +28,7 @@ import { Plus } from 'lucide-react';
 export default function Index() {
   const [player, setPlayer] = useState<PlayerState>(loadState);
   const [daily, setDaily] = useState<DailyStore>(loadDaily);
-  const [tab, setTab] = useState<Tab>('quests');
+  const [tab, setTab] = useState<Tab>('home');
   const [showAddQuest, setShowAddQuest] = useState(false);
   const [levelUpShow, setLevelUpShow] = useState(false);
 
@@ -318,16 +319,26 @@ export default function Index() {
   const weeklyQuests = player.quests.filter((q) => q.questType === 'weekly');
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className={`min-h-screen pb-20 ${tab === 'home' ? 'bg-black' : 'bg-background'}`}>
       <div className="max-w-md mx-auto px-4 pt-6">
-        <StatusPanel player={player} />
+        {tab !== 'home' && (
+          <>
+            <StatusPanel player={player} />
+            <div className="mt-4">
+              <SystemMessages messages={player.systemMessages} onDismiss={handleDismissMessage} />
+            </div>
+          </>
+        )}
 
-        {/* System Messages */}
-        <div className="mt-4">
-          <SystemMessages messages={player.systemMessages} onDismiss={handleDismissMessage} />
-        </div>
+        <div className={tab === 'home' ? '' : 'mt-3'}>
+          {tab === 'home' && (
+            <HomeTab
+              player={player}
+              onCompleteQuest={handleCompleteQuest}
+              onOpenTab={(t) => setTab(t)}
+            />
+          )}
 
-        <div className="mt-3">
           {tab === 'quests' && (
             <>
               <QuestList
