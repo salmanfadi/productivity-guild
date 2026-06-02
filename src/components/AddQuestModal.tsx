@@ -102,9 +102,9 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
   const totalStatPoints = Object.values(statRewards).reduce<number>((a, b) => a + (b || 0), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-slide-up" onClick={handleClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-slide-up sm:items-center sm:p-4" onClick={handleClose}>
       <div
-        className="w-full max-w-md bg-[#111111] border border-[#2A2A2A] rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto relative"
+        className="w-full max-w-md bg-[#111111] border border-[#2A2A2A] rounded-t-[28px] p-4 max-h-[92dvh] overflow-y-auto relative sm:rounded-[28px] sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top subtle highlight */}
@@ -181,14 +181,14 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
               </button>
             )}
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-2 min-[380px]:grid-cols-4">
             {QUEST_CATEGORIES.map((c) => {
               const selected = category === c.key;
               return (
                 <button
                   key={c.key}
                   onClick={() => { setCategory(c.key); setCategoryAuto(false); }}
-                  className={`flex flex-col items-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                  className={`flex min-h-[58px] flex-col items-center justify-center gap-1.5 rounded-xl px-1.5 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all border ${
                     selected
                       ? 'bg-white text-black border-white'
                       : 'bg-[#1A1A1A] text-white/40 border-[#2A2A2A] hover:border-white/20'
@@ -205,14 +205,14 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
         {/* Difficulty buttons */}
         <div className="space-y-2 mb-5">
           <label className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold block">Difficulty Level</label>
-          <div className="grid grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 min-[380px]:grid-cols-4">
             {DIFFICULTIES.map((d) => {
               const selected = difficulty === d.key;
               return (
                 <button
                   key={d.key}
                   onClick={() => setDifficulty(d.key)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+                  className={`flex min-h-[58px] flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-all ${
                     selected
                       ? 'bg-white text-black border-white'
                       : 'bg-[#1A1A1A] text-white/40 border-[#2A2A2A] hover:border-white/20'
@@ -241,13 +241,13 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
           </div>
 
           <TooltipProvider>
-            <div className="space-y-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4.5">
+            <div className="space-y-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-3 sm:p-4">
               {GROUPED_STATS.map((g) => (
                 <div key={g.key} className="space-y-2">
                   <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold">
                     {g.label}
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2 min-[380px]:grid-cols-3">
                     {g.stats.map((s) => {
                       const val = statRewards[s.key] || 0;
                       const active = val > 0;
@@ -255,7 +255,7 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
                         <Tooltip key={s.key}>
                           <TooltipTrigger asChild>
                             <div
-                              className={`flex items-center justify-between rounded-xl border transition-all px-2 py-1 cursor-help ${
+                              className={`flex min-h-[58px] items-center justify-between gap-1 rounded-xl border px-2 py-2 transition-all cursor-help ${
                                 active
                                   ? 'bg-white border-white text-black'
                                   : 'bg-[#111111] border-[#2A2A2A] text-white/40'
@@ -271,11 +271,14 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
                               >
                                 <Minus size={10} />
                               </button>
-                              <div className="flex flex-col items-center leading-none">
+                              <div className="flex min-w-0 flex-1 flex-col items-center text-center leading-none">
                                 <span className="text-[9px] font-bold">
                                   {s.label.toUpperCase()}
                                 </span>
-                                <span className="text-[8px] mt-0.5 opacity-80">
+                                <span className="mt-1 max-w-full truncate text-[8px] font-semibold opacity-70 min-[380px]:hidden">
+                                  {s.fullLabel}
+                                </span>
+                                <span className="text-[8px] mt-1 opacity-80">
                                   {active ? `+${val}` : '—'}
                                 </span>
                               </div>
