@@ -20,6 +20,7 @@ import Dashboard from '@/components/Dashboard';
 import RolesTab from '@/components/RolesTab';
 import MainQuestsTab from '@/components/MainQuestsTab';
 import DailyCheckInTab from '@/components/DailyCheckInTab';
+import HomeTab from '@/components/HomeTab';
 import SystemMessages from '@/components/SystemMessages';
 import BottomNav, { type Tab } from '@/components/BottomNav';
 import { Plus } from 'lucide-react';
@@ -27,7 +28,7 @@ import { Plus } from 'lucide-react';
 export default function Index() {
   const [player, setPlayer] = useState<PlayerState>(loadState);
   const [daily, setDaily] = useState<DailyStore>(loadDaily);
-  const [tab, setTab] = useState<Tab>('quests');
+  const [tab, setTab] = useState<Tab>('home');
   const [showAddQuest, setShowAddQuest] = useState(false);
   const [levelUpShow, setLevelUpShow] = useState(false);
 
