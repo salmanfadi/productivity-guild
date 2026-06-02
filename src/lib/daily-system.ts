@@ -1,6 +1,3 @@
-// Daily check-in + HP engine + decay
-// Soft, never-punishing modifiers driven by real-world inputs.
-
 import {
   type StatKey, type HunterStats, type SystemMessage, createSystemMessage,
 } from './game-system';
@@ -80,13 +77,12 @@ export function computeDailyEngine(c: DailyCheckIn): DailyEngineResult {
   if (c.energy <= 2) add('dis', -0.08, `Low energy (${c.energy}/5)`);
   else if (c.energy >= 4) add('dis', +0.05, `High energy (${c.energy}/5)`);
 
-  // ── Mood → EQ / Resilience ──
-  if (c.mood <= 2) add('eq', -0.05, `Low mood (${c.mood}/5)`);
-  else if (c.mood >= 4) add('eq', +0.05, `Positive mood`);
+  // ── Mood → Confidence / Collaboration ──
+  if (c.mood <= 2) add('conf', -0.05, `Low mood (${c.mood}/5)`);
+  else if (c.mood >= 4) add('conf', +0.05, `Positive mood`);
 
   // ── Sickness ── (soft, with recovery mode)
   if (c.sick) {
-    add('hp', -0.25, `🤒 Sick`);
     add('sta', -0.20, `Sick — stamina drained`);
     add('foc', -0.10, `Sick — clouded focus`);
     add('str', -0.10, `Sick — body weakened`);
@@ -106,16 +102,16 @@ export function computeDailyEngine(c: DailyCheckIn): DailyEngineResult {
   if (c.sleepHours >= 7 && c.sleepHours <= 9) messages.push(createSystemMessage(`😴 Well Rested — Stamina +10%`, 'reward'));
 
   const recoveryQuests = recoveryMode ? [
-    { title: 'Drink 3L of water', reward: { hp: 1 } as Partial<Record<StatKey, number>> },
-    { title: 'Walk 2,000 steps gently', reward: { sta: 1, hp: 1 } as Partial<Record<StatKey, number>> },
-    { title: 'Sleep 8+ hours tonight', reward: { sta: 2, hp: 2 } as Partial<Record<StatKey, number>> },
+    { title: 'Drink 3L of water', reward: { sta: 1 } as Partial<Record<StatKey, number>> },
+    { title: 'Walk 2,000 steps gently', reward: { sta: 1 } as Partial<Record<StatKey, number>> },
+    { title: 'Sleep 8+ hours tonight', reward: { sta: 2 } as Partial<Record<StatKey, number>> },
   ] : [];
 
   return { hp, modifiers: mods, effects, recoveryMode, recoveryQuests, messages };
 }
 
 // ── Decay: applied when days are missed ──
-// Returns adjusted stats + messages. Soft (max -2 per stat per check).
+// Returns adjusted stats + messages. Soft (max -1 per stat per check).
 export function applyDecay(
   stats: HunterStats,
   history: DailyCheckIn[],
@@ -125,8 +121,6 @@ export function applyDecay(
   const next = { ...stats };
 
   const recent = history.slice(-7);
-  const last = (pred: (c: DailyCheckIn) => boolean) =>
-    recent.length === 0 ? Infinity : recent.reverse().findIndex(pred);
 
   // No workout 5+ days → STR -1
   const lastWorkout = recent.findIndex(c => c.workoutDone);
@@ -148,9 +142,6 @@ export function applyDecay(
     next.sta = Math.max(1, next.sta - 1);
     messages.push(createSystemMessage(`😵 Bad sleep streak — Stamina -1`, 'warning'));
   }
-
-  // Suppress unused-var warning (last is exported intent but unused in checks above)
-  void last;
 
   return { stats: next, messages };
 }

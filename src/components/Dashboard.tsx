@@ -1,113 +1,153 @@
-import { type PlayerState, ALL_STATS, ALL_ROLES, type StatKey } from '@/lib/game-system';
-import { Coins, Flame, Trophy, Target, Sword, Brain, Heart, Eye, Timer, ShieldCheck, Code, Palette, MessageSquare, Zap, Wind, Dice4, Star, Shield, Activity } from 'lucide-react';
+import { type PlayerState, type StatKey, ALL_STATS, ALL_ROLES } from '@/lib/game-system';
+import { Dumbbell, Battery, ShieldCheck, Eye, Brain, Code, MessageSquare, Flame, Coins, Trophy, Calendar, Plus, RotateCcw } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const STAT_ICONS: Record<StatKey, typeof Sword> = {
-  str: Sword, sta: Timer, dis: ShieldCheck, foc: Eye, int: Brain, eq: Heart,
-  tech: Code, cre: Palette, com: MessageSquare, conf: Zap, cons: Wind,
-  luk: Dice4, rep: Star, res: Shield, hp: Activity,
+const STAT_ICONS: Record<StatKey, any> = {
+  str: Dumbbell,
+  sta: Battery,
+  dis: ShieldCheck,
+  foc: Eye,
+  int: Brain,
+  tech: Code,
+  com: MessageSquare,
+  conf: Flame,
 };
-
-const CAT_META = {
-  core:      { label: '⚔ Core Stats',      barClass: 'bg-primary',     textClass: 'text-primary',     glowClass: 'glow-text-primary' },
-  secondary: { label: '✦ Secondary Stats', barClass: 'bg-accent',      textClass: 'text-accent',      glowClass: 'glow-text-accent' },
-  hidden:    { label: '◈ Hidden Stats',    barClass: 'bg-glow-success', textClass: 'text-glow-success', glowClass: 'glow-text-success' },
-} as const;
 
 interface DashboardProps {
   player: PlayerState;
+  onAllocate: (stat: StatKey) => void;
+  onNameChange: (name: string) => void;
+  onReset: () => void;
 }
 
-export default function Dashboard({ player }: DashboardProps) {
-  const totalStatPoints = Object.values(player.stats).reduce((a, b) => a + b, 0);
-  const completedToday = player.quests.filter(q => q.completed && q.questType === 'daily').length;
-  const totalDaily = player.quests.filter(q => q.questType === 'daily').length;
+export default function Dashboard({ player, onAllocate, onNameChange, onReset }: DashboardProps) {
+  const totalStats = Object.values(player.stats).reduce((a, b) => a + b, 0);
   const activeRole = ALL_ROLES.find(r => r.id === player.activeRole);
+  const xpPercent = Math.min((player.xp / player.xpToNext) * 100, 100);
 
   return (
-    <div className="space-y-4 animate-slide-up">
-      {/* Character Sheet Header */}
-      <div className="system-window rounded-lg p-4 text-center scanline">
-        <p className="font-display text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1">
-          Character Sheet
+    <div className="space-y-6 animate-slide-up pb-10">
+      {/* Character Profile Overview */}
+      <div className="rounded-[28px] bg-[#111111] border border-[#2A2A2A] p-6 shadow-xl text-center">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-white/40 font-semibold mb-2">
+          STATUS SHEET
         </p>
-        <p className="font-display text-xl font-bold text-primary glow-text-primary">{player.name}</p>
-        {activeRole && (
-          <p className="text-[10px] text-accent font-display uppercase tracking-[0.2em] mt-0.5">
+
+        {/* Editable Name Field */}
+        <input
+          type="text"
+          value={player.name}
+          onChange={(e) => onNameChange(e.target.value)}
+          className="bg-transparent text-center text-[22px] font-bold text-white focus:outline-none focus:border-b focus:border-white/20 w-full tracking-tight mb-1"
+        />
+
+        {activeRole ? (
+          <p className="text-[11px] text-white/60 font-semibold uppercase tracking-[0.2em] mt-1">
             {activeRole.name}
           </p>
+        ) : (
+          <p className="text-[11px] text-white/40 uppercase tracking-wider mt-1">HUNTER</p>
         )}
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Level {player.level} · Total Power {totalStatPoints}
-        </p>
+        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-white/50 border-t border-[#2A2A2A]/40 pt-4">
+          <div>
+            <span className="font-bold text-white text-sm">{player.level}</span> Level
+          </div>
+          <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+          <div>
+            <span className="font-bold text-white text-sm">{totalStats}</span> Power Index
+          </div>
+        </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Grid of Key Performance Indicators */}
+      <div className="grid grid-cols-3 gap-3">
         {[
-          { icon: Coins,   value: player.coins,                       label: 'Coins',     color: 'text-glow-warning' },
-          { icon: Flame,   value: `${player.streak}d`,                label: 'Streak',    color: 'text-glow-danger' },
-          { icon: Trophy,  value: player.totalQuestsCompleted,        label: 'Done',      color: 'text-primary' },
-          { icon: Target,  value: `${completedToday}/${totalDaily || '-'}`, label: 'Daily', color: 'text-glow-success' },
-        ].map((item) => {
+          { icon: Coins, value: player.coins, label: 'Coins' },
+          { icon: Trophy, value: player.totalQuestsCompleted, label: 'Quests' },
+          { icon: Calendar, value: `${player.dailyQuestsCompleted}d`, label: 'Streak' },
+        ].map((item, idx) => {
           const Icon = item.icon;
           return (
-            <div key={item.label} className="system-window rounded-lg p-3 text-center">
-              <Icon size={16} className={`mx-auto mb-1 ${item.color}`} />
-              <p className="font-display text-sm font-bold">{item.value}</p>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-0.5">{item.label}</p>
+            <div key={idx} className="rounded-[20px] bg-[#111111] border border-[#2A2A2A] p-4 text-center">
+              <Icon size={16} className="mx-auto mb-2 text-white/40" />
+              <p className="text-sm font-bold text-white">{item.value}</p>
+              <p className="text-[9px] text-white/40 uppercase tracking-wider font-semibold mt-0.5">{item.label}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Stat radar by category */}
-      {(['core', 'secondary', 'hidden'] as const).map((cat) => {
-        const meta = CAT_META[cat];
-        const catStats = ALL_STATS.filter(s => s.category === cat);
-        return (
-          <div key={cat} className="system-window rounded-lg p-4">
-            <h4 className={`font-display text-[10px] uppercase tracking-[0.2em] mb-3 ${meta.textClass}`}>
-              {meta.label}
-            </h4>
-            <div className="space-y-2">
-              {catStats.map((s) => {
-                const Icon = STAT_ICONS[s.key];
-                const val = player.stats[s.key];
-                const max = 100;
-                const pct = Math.min((val / max) * 100, 100);
-                const high = val >= 50;
-                return (
-                  <div key={s.key} className="flex items-center gap-2">
-                    <Icon size={11} className={`${meta.textClass} shrink-0`} />
-                    <span className="text-[10px] w-9 text-muted-foreground uppercase font-display tracking-wider shrink-0">
-                      {s.label}
+      {/* Level Up points indicator */}
+      {player.statPoints > 0 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-[20px] bg-white text-black p-4 text-center font-bold text-xs uppercase tracking-widest"
+        >
+          {player.statPoints} Stat Points Available for Allocation
+        </motion.div>
+      )}
+
+      {/* Core and Secondary Stats progress bars */}
+      <div className="rounded-[28px] bg-[#111111] border border-[#2A2A2A] p-6 space-y-5">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.25em] text-white/40 mb-2 border-b border-[#2A2A2A]/40 pb-3">
+          Core Attributes
+        </h3>
+
+        <div className="space-y-4">
+          {ALL_STATS.map((s) => {
+            const Icon = STAT_ICONS[s.key];
+            const value = player.stats[s.key] || 0;
+            const maxVal = 100;
+            const pct = Math.min((value / maxVal) * 100, 100);
+
+            return (
+              <div key={s.key} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-white/60 shrink-0">
+                  <Icon size={14} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-white/60 truncate">
+                      {s.fullLabel}
                     </span>
-                    <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${meta.barClass}`}
-                        style={{ width: `${pct}%`, boxShadow: high ? `0 0 8px hsl(var(--glow-${cat === 'core' ? 'primary' : cat === 'secondary' ? 'accent' : 'success'}) / 0.6)` : undefined }}
-                      />
-                    </div>
-                    <span className={`font-display text-[11px] font-bold w-7 text-right ${meta.textClass} ${high ? meta.glowClass : ''}`}>
-                      {val}
+                    <span className="text-[11px] font-bold text-white tabular-nums">
+                      {value} <span className="text-[9px] text-white/40 font-medium">/ 100</span>
                     </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+                  <div className="h-1.5 bg-[#1A1A1A] rounded-full overflow-hidden border border-[#2A2A2A]/40">
+                    <motion.div
+                      className="h-full bg-white rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                    />
+                  </div>
+                </div>
 
-      {/* Best Streak */}
-      {player.bestStreak > 0 && (
-        <div className="system-window rounded-lg p-3 text-center">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-display">Best Streak</p>
-          <p className="font-display text-2xl font-bold text-glow-warning glow-text-warning mt-1">
-            {player.bestStreak} days
-          </p>
+                {/* Allocate stat button if points available */}
+                {player.statPoints > 0 && (
+                  <button
+                    onClick={() => onAllocate(s.key)}
+                    className="w-7 h-7 rounded-full bg-white text-black flex items-center justify-center hover:bg-white/80 active:scale-95 transition-all shrink-0 border border-white"
+                  >
+                    <Plus size={14} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      {/* Reset Progress Button */}
+      <button
+        onClick={onReset}
+        className="w-full py-4 rounded-[24px] bg-[#111111] hover:bg-[#1A1A1A] border border-[#2A2A2A] text-white/40 hover:text-white/80 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-4"
+      >
+        <RotateCcw size={14} />
+        Reset Character Progress
+      </button>
     </div>
   );
 }

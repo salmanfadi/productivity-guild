@@ -1,17 +1,13 @@
-import { Scroll, User, Swords, Target, LayoutDashboard, GitBranch, HeartPulse, Crown, Home } from 'lucide-react';
+import { Scroll, User, Award, HeartPulse, Home } from 'lucide-react';
 
-export type Tab = 'home' | 'quests' | 'mains' | 'daily' | 'checkin' | 'stats' | 'dashboard' | 'profile' | 'roles';
+export type Tab = 'home' | 'quests' | 'dashboard' | 'roles' | 'checkin';
 
 const TABS: { key: Tab; label: string; icon: typeof Scroll }[] = [
-  { key: 'home',      label: 'Home',   icon: Home },
-  { key: 'quests',    label: 'Quests', icon: Scroll },
-  { key: 'mains',     label: 'Mains',  icon: Crown },
-  { key: 'daily',     label: 'Daily',  icon: Target },
-  { key: 'checkin',   label: 'Vitals', icon: HeartPulse },
-  { key: 'dashboard', label: 'Sheet',  icon: LayoutDashboard },
-  { key: 'roles',     label: 'Roles',  icon: GitBranch },
-  { key: 'stats',     label: 'Stats',  icon: Swords },
-  { key: 'profile',   label: 'You',    icon: User },
+  { key: 'home',      label: 'Home',      icon: Home },
+  { key: 'quests',    label: 'Quests',    icon: Scroll },
+  { key: 'dashboard', label: 'Character', icon: User },
+  { key: 'roles',     label: 'Roles',     icon: Award },
+  { key: 'checkin',   label: 'Check-In',  icon: HeartPulse },
 ];
 
 interface BottomNavProps {
@@ -21,8 +17,8 @@ interface BottomNavProps {
 
 export default function BottomNav({ active, onChange }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-primary/20">
-      <div className="max-w-md mx-auto flex">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/90 border-t border-[#2A2A2A] backdrop-blur-md">
+      <div className="max-w-md mx-auto flex justify-around px-2">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = active === tab.key;
@@ -30,20 +26,17 @@ export default function BottomNav({ active, onChange }: BottomNavProps) {
             <button
               key={tab.key}
               onClick={() => onChange(tab.key)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2.5 transition-all relative ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              className={`flex-1 flex flex-col items-center gap-1.5 py-3 transition-colors ${
+                isActive ? 'text-white' : 'text-white/40 hover:text-white/70'
               }`}
               aria-label={tab.label}
             >
-              {/* Active indicator bar */}
-              {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full glow-primary" />
-              )}
               <Icon
-                size={18}
-                className={isActive ? 'drop-shadow-[0_0_8px_hsl(var(--glow-primary)/0.7)]' : ''}
+                size={20}
+                strokeWidth={isActive ? 2.5 : 1.75}
+                className="transition-transform duration-200"
               />
-              <span className="text-[9px] uppercase tracking-wider font-display">
+              <span className="text-[9px] font-bold uppercase tracking-widest scale-95">
                 {tab.label}
               </span>
             </button>

@@ -3,42 +3,39 @@ import {
   type PlayerState, type Difficulty, type StatKey, type QuestType, type QuestCategory,
   type MainQuest,
   createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getRank, getXpToNext,
-  loadState, saveState, maybeGenerateRandomEvent, createSystemMessage,
+  maybeGenerateRandomEvent, createSystemMessage,
   getUnlockedRoles, ALL_ROLES,
 } from '@/lib/game-system';
 import {
   type DailyCheckIn, type DailyStore,
   loadDaily, saveDaily, upsertCheckIn, computeDailyEngine, applyDecay, todayStr,
 } from '@/lib/daily-system';
+import {
+  getOrCreateUserId, fetchFullState, createQuestInDB, completeQuestInDB,
+  deleteQuestInDB, setActiveRoleInDB, updateNameInDB, updatePlayerStatsInDB, saveCheckinInDB
+} from '@/lib/supabase-sync';
+import { supabase } from '@/integrations/supabase/client';
 import StatusPanel from '@/components/StatusPanel';
 import QuestList from '@/components/QuestList';
 import AddQuestModal from '@/components/AddQuestModal';
-import StatAllocation from '@/components/StatAllocation';
 import LevelUpOverlay from '@/components/LevelUpOverlay';
-import ProfileTab from '@/components/ProfileTab';
 import Dashboard from '@/components/Dashboard';
 import RolesTab from '@/components/RolesTab';
-import MainQuestsTab from '@/components/MainQuestsTab';
 import DailyCheckInTab from '@/components/DailyCheckInTab';
 import HomeTab from '@/components/HomeTab';
 import SystemMessages from '@/components/SystemMessages';
 import BottomNav, { type Tab } from '@/components/BottomNav';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 
 export default function Index() {
-  const [player, setPlayer] = useState<PlayerState>(loadState);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [player, setPlayer] = useState<PlayerState>(getDefaultState());
   const [daily, setDaily] = useState<DailyStore>(loadDaily);
   const [tab, setTab] = useState<Tab>('home');
+  const [questSubTab, setQuestSubTab] = useState<'active' | 'daily' | 'weekly'>('active');
   const [showAddQuest, setShowAddQuest] = useState(false);
   const [levelUpShow, setLevelUpShow] = useState(false);
-
-  const update = useCallback((updater: (prev: PlayerState) => PlayerState) => {
-    setPlayer((prev) => {
-      const next = updater(prev);
-      saveState(next);
-      return next;
-    });
-  }, []);
+  const [syncing, setSyncing] = useState(true);
 
   const updateDaily = useCallback((updater: (prev: DailyStore) => DailyStore) => {
     setDaily((prev) => {
@@ -48,278 +45,309 @@ export default function Index() {
     });
   }, []);
 
-  // Decay check on mount (once per day)
+  // Sync initialization on mount
+  useEffect(() => {
+    async function initSync() {
+      setSyncing(true);
+      try {
+        const id = await getOrCreateUserId();
+        setUserId(id);
+        const data = await fetchFullState(id);
+        if (data) {
+          setPlayer(data.player);
+          setDaily({ history: data.checkins });
+        }
+      } catch (err) {
+        console.error('Failed initialization:', err);
+      } finally {
+        setSyncing(false);
+      }
+    }
+    initSync();
+  }, []);
+
+  // Subscribe to real-time updates for syncing across devices
+  useEffect(() => {
+    if (!userId) return;
+
+    const userChannel = supabase
+      .channel('realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
+        async () => {
+          const fresh = await fetchFullState(userId);
+          if (fresh) setPlayer(fresh.player);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'player_stats', filter: `user_id=eq.${userId}` },
+        async () => {
+          const fresh = await fetchFullState(userId);
+          if (fresh) setPlayer(fresh.player);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'quests', filter: `user_id=eq.${userId}` },
+        async () => {
+          const fresh = await fetchFullState(userId);
+          if (fresh) setPlayer(fresh.player);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userChannel);
+    };
+  }, [userId]);
+
+  // Decay check once daily
   useEffect(() => {
     const today = todayStr();
     if (daily.lastDecayDate === today) return;
     const { stats: decayedStats, messages: decayMsgs } = applyDecay(player.stats, daily.history, null);
     if (decayMsgs.length > 0) {
-      update((prev) => ({
-        ...prev,
-        stats: decayedStats,
-        systemMessages: [...prev.systemMessages, ...decayMsgs],
-      }));
+      setPlayer((prev) => {
+        const updated = {
+          ...prev,
+          stats: decayedStats,
+          systemMessages: [...prev.systemMessages, ...decayMsgs],
+        };
+        if (userId) {
+          updatePlayerStatsInDB(userId, decayedStats);
+        }
+        return updated;
+      });
     }
     updateDaily((prev) => ({ ...prev, lastDecayDate: today }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [player.stats, daily.history, daily.lastDecayDate, userId, updateDaily]);
 
-  const handleCompleteQuest = (id: string) => {
-    update((prev) => {
-      const quest = prev.quests.find((q) => q.id === id);
-      if (!quest || quest.completed) return prev;
+  const handleCompleteQuest = async (id: string) => {
+    const quest = player.quests.find((q) => q.id === id);
+    if (!quest || quest.completed) return;
 
-      let xp = prev.xp + quest.xpReward;
-      let level = prev.level;
-      let xpToNext = prev.xpToNext;
-      let statPoints = prev.statPoints;
-      let coins = prev.coins + quest.coinReward;
+    // Calculate level ups and points
+    let xp = player.xp + quest.xpReward;
+    let level = player.level;
+    let xpToNext = player.xpToNext;
+    let coins = player.coins + quest.coinReward;
 
-      while (xp >= xpToNext) {
-        xp -= xpToNext;
-        level++;
-        xpToNext = getXpToNext(level);
-        statPoints += 3;
-        setLevelUpShow(true);
+    while (xp >= xpToNext) {
+      xp -= xpToNext;
+      level++;
+      xpToNext = getXpToNext(level);
+      setLevelUpShow(true);
+    }
+
+    // Allocate quest stat rewards
+    const newStats = { ...player.stats };
+    for (const [key, val] of Object.entries(quest.statRewards || {})) {
+      if (val) {
+        newStats[key as StatKey] = (newStats[key as StatKey] || 0) + val;
       }
+    }
 
-      // Apply stat rewards from quest
-      const newStats = { ...prev.stats };
-      for (const [key, val] of Object.entries(quest.statRewards || {})) {
-        if (val) newStats[key as StatKey] = (newStats[key as StatKey] || 0) + val;
-      }
+    // Trigger local update for instant feedback
+    setPlayer((prev) => ({
+      ...prev,
+      xp,
+      level,
+      xpToNext,
+      coins,
+      stats: newStats,
+      quests: prev.quests.map((q) => (q.id === id ? { ...q, completed: true } : q)),
+      totalQuestsCompleted: prev.totalQuestsCompleted + 1,
+    }));
 
-      // Random event
-      const messages = [...prev.systemMessages];
-      const event = maybeGenerateRandomEvent();
-      if (event) {
-        messages.push(event);
-        // Apply random stat boosts from events
-        if (event.text.includes('+2 LUK')) newStats.luk += 2;
-        if (event.text.includes('+1 INT')) newStats.int += 1;
-      }
-
-      // Streak: update if completing first quest today
-      let streak = prev.streak;
-      let bestStreak = prev.bestStreak;
-      const today = new Date().toISOString().slice(0, 10);
-      if (prev.lastActiveDate !== today || prev.totalQuestsCompleted === 0) {
-        streak = prev.streak + 1;
-        bestStreak = Math.max(bestStreak, streak);
-        // Consistency bonus
-        if (streak > 0 && streak % 7 === 0) {
-          newStats.cons += 1;
-          messages.push(createSystemMessage(`🔥 ${streak}-day streak! +1 Consistency`, 'reward'));
-        }
-      }
-
-      // Detect newly-unlocked roles
-      const prevUnlocked = new Set(prev.unlockedRoles || []);
-      const nowUnlocked = getUnlockedRoles(newStats).map((r) => r.id);
-      const newlyUnlocked = nowUnlocked.filter((rid) => !prevUnlocked.has(rid));
-      for (const rid of newlyUnlocked) {
-        const role = ALL_ROLES.find((r) => r.id === rid);
-        if (role) {
-          messages.push(createSystemMessage(
-            `🏅 New Identity Unlocked: ${role.name}${role.tier === 'rare' ? ' [S-RANK]' : ''}`,
-            'reward',
-          ));
-        }
-      }
-
-      return {
-        ...prev,
-        xp,
-        level,
-        xpToNext,
-        statPoints,
-        coins,
-        streak,
-        bestStreak,
-        lastActiveDate: today,
-        stats: newStats,
-        rank: getRank(level),
-        quests: prev.quests.map((q) => (q.id === id ? { ...q, completed: true } : q)),
-        totalQuestsCompleted: prev.totalQuestsCompleted + 1,
-        dailyQuestsCompleted: quest.questType === 'daily' ? prev.dailyQuestsCompleted + 1 : prev.dailyQuestsCompleted,
-        weeklyQuestsCompleted: quest.questType === 'weekly' ? (prev.weeklyQuestsCompleted || 0) + 1 : (prev.weeklyQuestsCompleted || 0),
-        systemMessages: messages,
-        unlockedRoles: nowUnlocked,
-      };
-    });
+    // Persist to Supabase
+    if (userId) {
+      await completeQuestInDB(
+        userId,
+        id,
+        { level, xp, coins },
+        quest.statRewards
+      );
+    }
   };
 
-  const handleSetActiveRole = (roleId: string) => {
-    update((prev) => ({ ...prev, activeRole: roleId }));
+  const handleSetActiveRole = async (roleId: string) => {
+    setPlayer((prev) => ({ ...prev, activeRole: roleId }));
+    if (userId) {
+      await setActiveRoleInDB(userId, roleId);
+    }
   };
 
-  const handleAddQuest = (
+  const handleAddQuest = async (
     title: string,
     difficulty: Difficulty,
     questType: QuestType,
     statRewards: Partial<Record<StatKey, number>>,
     category: QuestCategory | undefined,
   ) => {
-    update((prev) => ({
+    const newQuest = createQuest(title, difficulty, questType, statRewards, category);
+    setPlayer((prev) => ({
       ...prev,
-      quests: [...prev.quests, createQuest(title, difficulty, questType, statRewards, category)],
+      quests: [...prev.quests, newQuest],
     }));
+
+    if (userId) {
+      await createQuestInDB(userId, newQuest);
+    }
   };
 
-  const handleDeleteQuest = (id: string) => {
-    update((prev) => ({
+  const handleDeleteQuest = async (id: string) => {
+    setPlayer((prev) => ({
       ...prev,
       quests: prev.quests.filter((q) => q.id !== id),
     }));
+
+    if (userId) {
+      await deleteQuestInDB(id);
+    }
   };
 
-  // ── Main Quest handlers ──
-  const handleCreateMainQuest = (mq: MainQuest) => {
-    update((prev) => ({
+  const handleAllocateStat = async (stat: StatKey) => {
+    // Standard stat leveling logic, increment stat directly
+    const updatedStats = {
+      ...player.stats,
+      [stat]: (player.stats[stat] || 0) + 1
+    };
+
+    setPlayer((prev) => ({
       ...prev,
-      mainQuests: [mq, ...(prev.mainQuests || [])],
-      systemMessages: [
-        ...prev.systemMessages,
-        createSystemMessage(`👑 New Main Quest: ${mq.title}`, 'event'),
-      ],
+      stats: updatedStats
     }));
-  };
 
-  const handleDeleteMainQuest = (id: string) => {
-    update((prev) => ({
-      ...prev,
-      mainQuests: (prev.mainQuests || []).filter((m) => m.id !== id),
-    }));
-  };
-
-  const handleToggleSubquest = (mqId: string, subId: string) => {
-    update((prev) => {
-      const mqList = prev.mainQuests || [];
-      const mq = mqList.find((m) => m.id === mqId);
-      if (!mq) return prev;
-      const sub = mq.subquests.find((s) => s.id === subId);
-      if (!sub) return prev;
-
-      const wasDone = sub.done;
-      const updatedSubs = mq.subquests.map((s) => (s.id === subId ? { ...s, done: !s.done } : s));
-      const allDone = updatedSubs.every((s) => s.done);
-      const wasAllDone = mq.subquests.every((s) => s.done);
-
-      // XP per sub toggle (only on completion, not on un-toggle)
-      let xp = prev.xp;
-      let level = prev.level;
-      let xpToNext = prev.xpToNext;
-      let statPoints = prev.statPoints;
-      const newStats = { ...prev.stats };
-      const messages = [...prev.systemMessages];
-
-      if (!wasDone) {
-        xp += 10;
-        newStats.dis = (newStats.dis || 0) + 1;
-      }
-
-      // Final bonus on completing the whole arc
-      if (allDone && !wasAllDone) {
-        xp += mq.xpReward;
-        messages.push(
-          createSystemMessage(`🏆 Main Quest complete: ${mq.title} (+${mq.xpReward} XP)`, 'reward'),
-        );
-      }
-
-      while (xp >= xpToNext) {
-        xp -= xpToNext;
-        level++;
-        xpToNext = getXpToNext(level);
-        statPoints += 3;
-        setLevelUpShow(true);
-      }
-
-      return {
-        ...prev,
-        xp,
-        level,
-        xpToNext,
-        statPoints,
-        stats: newStats,
-        rank: getRank(level),
-        systemMessages: messages,
-        mainQuests: mqList.map((m) =>
-          m.id === mqId ? { ...m, subquests: updatedSubs, completed: allDone } : m,
-        ),
-      };
-    });
-  };
-
-  const handleAllocateStat = (stat: StatKey) => {
-    update((prev) => {
-      if (prev.statPoints <= 0) return prev;
-      return {
-        ...prev,
-        statPoints: prev.statPoints - 1,
-        stats: { ...prev.stats, [stat]: prev.stats[stat] + 1 },
-      };
-    });
+    if (userId) {
+      await updatePlayerStatsInDB(userId, updatedStats);
+    }
   };
 
   const handleLoadDailies = () => {
-    update((prev) => {
-      const hasDailies = prev.quests.some((q) => q.questType === 'daily' && !q.completed);
-      if (hasDailies) return prev;
-      return { ...prev, quests: [...prev.quests, ...getDailyQuests()] };
-    });
+    const hasDailies = player.quests.some((q) => q.questType === 'daily' && !q.completed);
+    if (hasDailies) return;
+
+    const freshDailies = getDailyQuests();
+    setPlayer((prev) => ({
+      ...prev,
+      quests: [...prev.quests, ...freshDailies]
+    }));
+
+    if (userId) {
+      freshDailies.forEach(async (q) => {
+        await createQuestInDB(userId, q);
+      });
+    }
   };
 
   const handleLoadWeeklies = () => {
-    update((prev) => {
-      const hasWeeklies = prev.quests.some((q) => q.questType === 'weekly' && !q.completed);
-      if (hasWeeklies) return prev;
-      return { ...prev, quests: [...prev.quests, ...getWeeklyQuests()] };
-    });
+    const hasWeeklies = player.quests.some((q) => q.questType === 'weekly' && !q.completed);
+    if (hasWeeklies) return;
+
+    const freshWeeklies = getWeeklyQuests();
+    setPlayer((prev) => ({
+      ...prev,
+      quests: [...prev.quests, ...freshWeeklies]
+    }));
+
+    if (userId) {
+      freshWeeklies.forEach(async (q) => {
+        await createQuestInDB(userId, q);
+      });
+    }
   };
 
   const handleDismissMessage = (id: string) => {
-    update((prev) => ({
+    setPlayer((prev) => ({
       ...prev,
       systemMessages: prev.systemMessages.map(m => m.id === id ? { ...m, read: true } : m),
     }));
   };
 
-  const handleReset = () => {
-    const fresh = getDefaultState();
-    saveState(fresh);
-    setPlayer(fresh);
+  const handleReset = async () => {
+    if (!userId) return;
+    setSyncing(true);
+    try {
+      // Clear Supabase Quests
+      const { error: delError } = await supabase.from('quests').delete().eq('user_id', userId);
+      if (delError) throw delError;
+
+      // Reset User metrics
+      await supabase.from('users').update({
+        level: 1,
+        xp: 0,
+        coins: 0,
+        active_role: 'initiate'
+      }).eq('id', userId);
+
+      // Reset Stats
+      const defaultSt = getDefaultStats();
+      await updatePlayerStatsInDB(userId, defaultSt);
+
+      const data = await fetchFullState(userId);
+      if (data) {
+        setPlayer(data.player);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  const handleNameChange = (name: string) => {
-    update((prev) => ({ ...prev, name }));
+  const handleNameChange = async (name: string) => {
+    setPlayer((prev) => ({ ...prev, name }));
+    if (userId) {
+      await updateNameInDB(userId, name);
+    }
   };
 
-  const handleSaveCheckIn = (c: DailyCheckIn) => {
-    const wasFirstToday = !daily.history.some(h => h.date === c.date);
+  const handleSaveCheckIn = async (c: DailyCheckIn) => {
     updateDaily((prev) => upsertCheckIn(prev, c));
     const result = computeDailyEngine(c);
-    if (wasFirstToday && result.messages.length > 0) {
-      update((prev) => ({
+
+    if (userId) {
+      await saveCheckinInDB(userId, c, result.hp);
+    }
+
+    if (result.messages.length > 0) {
+      setPlayer((prev) => ({
         ...prev,
         systemMessages: [...prev.systemMessages, ...result.messages],
       }));
     }
   };
 
-  const handleAcceptRecoveryQuest = (title: string, reward: Partial<Record<StatKey, number>>) => {
-    update((prev) => ({
+  const handleAcceptRecoveryQuest = async (title: string, reward: Partial<Record<StatKey, number>>) => {
+    const recoveryQuest = createQuest(title, 'easy', 'custom', reward);
+    setPlayer((prev) => ({
       ...prev,
-      quests: [...prev.quests, createQuest(title, 'easy', 'custom', reward)],
+      quests: [...prev.quests, recoveryQuest],
       systemMessages: [...prev.systemMessages, createSystemMessage(`🛡 Recovery quest accepted: ${title}`, 'info')],
     }));
+
+    if (userId) {
+      await createQuestInDB(userId, recoveryQuest);
+    }
   };
 
   const activeQuests = player.quests.filter((q) => q.questType !== 'daily' && q.questType !== 'weekly');
   const dailyQuests = player.quests.filter((q) => q.questType === 'daily');
   const weeklyQuests = player.quests.filter((q) => q.questType === 'weekly');
 
+  if (syncing) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white">
+        <RefreshCw size={28} className="animate-spin text-white/50 mb-3" />
+        <p className="font-sans text-[11px] uppercase tracking-[0.25em] text-white/40">Synchronizing System...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className={`min-h-screen pb-20 ${tab === 'home' ? 'bg-black' : 'bg-background'}`}>
+    <div className={`min-h-screen pb-24 ${tab === 'home' ? 'bg-black' : 'bg-black text-white'}`}>
       <div className="max-w-md mx-auto px-4 pt-6">
         {tab !== 'home' && (
           <>
@@ -340,72 +368,83 @@ export default function Index() {
           )}
 
           {tab === 'quests' && (
-            <>
-              <QuestList
-                quests={activeQuests}
-                onComplete={handleCompleteQuest}
-                onDelete={handleDeleteQuest}
-                title="Active Quests"
-                emptyText="No quests yet. Accept a new quest!"
-              />
-              <button
-                onClick={() => setShowAddQuest(true)}
-                className="w-full mt-3 py-3 rounded-lg border border-dashed border-border text-muted-foreground text-sm flex items-center justify-center gap-2 hover:border-primary hover:text-primary transition-colors"
-              >
-                <Plus size={16} />
-                New Quest
-              </button>
-            </>
-          )}
-
-          {tab === 'mains' && (
-            <MainQuestsTab
-              mainQuests={player.mainQuests || []}
-              onCreate={handleCreateMainQuest}
-              onToggleSub={handleToggleSubquest}
-              onDelete={handleDeleteMainQuest}
-            />
-          )}
-
-
-
-          {tab === 'daily' && (
-            <>
-              {dailyQuests.length === 0 && (
-                <button
-                  onClick={handleLoadDailies}
-                  className="w-full mb-3 py-3 rounded-lg bg-primary text-primary-foreground font-display text-sm uppercase tracking-wider font-bold glow-primary"
-                >
-                  Accept Daily Quests
-                </button>
-              )}
-              <QuestList
-                quests={dailyQuests}
-                onComplete={handleCompleteQuest}
-                onDelete={handleDeleteQuest}
-                title="Daily Quests"
-                emptyText="Accept your daily quests above!"
-              />
-
-              {/* Weekly section */}
-              <div className="mt-6">
-                {weeklyQuests.length === 0 && (
+            <div className="space-y-4">
+              {/* Segmented control for Quests */}
+              <div className="flex border border-[#2A2A2A] rounded-full p-1 bg-[#111111] max-w-sm mx-auto">
+                {(['active', 'daily', 'weekly'] as const).map((t) => (
                   <button
-                    onClick={handleLoadWeeklies}
-                    className="w-full mb-3 py-3 rounded-lg bg-accent text-accent-foreground font-display text-sm uppercase tracking-wider font-bold glow-accent"
+                    key={t}
+                    onClick={() => setQuestSubTab(t)}
+                    className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all ${
+                      questSubTab === t
+                        ? 'bg-white text-black'
+                        : 'text-white/40 hover:text-white'
+                    }`}
                   >
-                    Accept Weekly Quests
+                    {t}
                   </button>
-                )}
-                <QuestList
-                  quests={weeklyQuests}
-                  onComplete={handleCompleteQuest}
-                  onDelete={handleDeleteQuest}
-                  title="Weekly Quests"
-                  emptyText="Accept your weekly quests above!"
-                />
+                ))}
               </div>
-            </>
+
+              {questSubTab === 'active' && (
+                <>
+                  <QuestList
+                    quests={activeQuests}
+                    onComplete={handleCompleteQuest}
+                    onDelete={handleDeleteQuest}
+                    title="Active Quests"
+                    emptyText="No active custom quests. Add one below!"
+                  />
+                  <button
+                    onClick={() => setShowAddQuest(true)}
+                    className="w-full mt-4 py-4 rounded-[24px] border border-dashed border-[#2A2A2A] text-white/50 text-[13px] flex items-center justify-center gap-2 hover:border-white/20 hover:text-white transition-colors bg-[#111111]/30"
+                  >
+                    <Plus size={15} />
+                    New Custom Quest
+                  </button>
+                </>
+              )}
+
+              {questSubTab === 'daily' && (
+                <>
+                  {dailyQuests.length === 0 && (
+                    <button
+                      onClick={handleLoadDailies}
+                      className="w-full py-4 rounded-[24px] bg-white text-black font-bold text-xs uppercase tracking-widest hover:bg-white/90 active:scale-[0.99] transition-all"
+                    >
+                      Accept Daily Quests
+                    </button>
+                  )}
+                  <QuestList
+                    quests={dailyQuests}
+                    onComplete={handleCompleteQuest}
+                    onDelete={handleDeleteQuest}
+                    title="Daily Quests"
+                    emptyText="Accept your daily quests above!"
+                  />
+                </>
+              )}
+
+              {questSubTab === 'weekly' && (
+                <>
+                  {weeklyQuests.length === 0 && (
+                    <button
+                      onClick={handleLoadWeeklies}
+                      className="w-full py-4 rounded-[24px] border border-[#2A2A2A] bg-[#111111] text-white font-bold text-xs uppercase tracking-widest hover:border-white/30 active:scale-[0.99] transition-all"
+                    >
+                      Accept Weekly Quests
+                    </button>
+                  )}
+                  <QuestList
+                    quests={weeklyQuests}
+                    onComplete={handleCompleteQuest}
+                    onDelete={handleDeleteQuest}
+                    title="Weekly Quests"
+                    emptyText="Accept your weekly quests above!"
+                  />
+                </>
+              )}
+            </div>
           )}
 
           {tab === 'checkin' && (
@@ -416,8 +455,6 @@ export default function Index() {
             />
           )}
 
-          {tab === 'dashboard' && <Dashboard player={player} />}
-
           {tab === 'roles' && (
             <RolesTab
               stats={player.stats}
@@ -426,19 +463,12 @@ export default function Index() {
             />
           )}
 
-          {tab === 'stats' && (
-            <StatAllocation
-              stats={player.stats}
-              statPoints={player.statPoints}
-              onAllocate={handleAllocateStat}
-            />
-          )}
-
-          {tab === 'profile' && (
-            <ProfileTab
+          {tab === 'dashboard' && (
+            <Dashboard
               player={player}
-              onReset={handleReset}
+              onAllocate={handleAllocateStat}
               onNameChange={handleNameChange}
+              onReset={handleReset}
             />
           )}
         </div>

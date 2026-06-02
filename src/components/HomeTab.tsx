@@ -6,7 +6,7 @@ import { ALL_ROLES } from '@/lib/game-system';
 interface HomeTabProps {
   player: PlayerState;
   onCompleteQuest: (id: string) => void;
-  onOpenTab: (tab: 'quests' | 'mains' | 'daily' | 'dashboard') => void;
+  onOpenTab: (tab: any) => void;
 }
 
 const QUICK_STATS: { key: StatKey; label: string; icon: typeof Dumbbell }[] = [
@@ -29,11 +29,6 @@ export default function HomeTab({ player, onCompleteQuest, onOpenTab }: HomeTabP
   const role = ALL_ROLES.find((r) => r.id === player.activeRole);
   const xpPct = Math.min(100, Math.round((player.xp / player.xpToNext) * 100));
 
-  const mainQuest = (player.mainQuests || []).find((m) => !m.completed);
-  const mainDone = mainQuest ? mainQuest.subquests.filter((s) => s.done).length : 0;
-  const mainTotal = mainQuest ? mainQuest.subquests.length : 0;
-  const mainPct = mainTotal ? Math.round((mainDone / mainTotal) * 100) : 0;
-
   const dailies = player.quests
     .filter((q) => q.questType === 'daily')
     .slice(0, 4);
@@ -43,105 +38,68 @@ export default function HomeTab({ player, onCompleteQuest, onOpenTab }: HomeTabP
   });
 
   return (
-    <div className="min-h-screen bg-black text-white -mx-4 px-5 pt-2 pb-24 font-sans">
-      {/* Greeting */}
+    <div className="min-h-screen bg-black text-white px-1 pt-2 pb-24 font-sans">
+      {/* Header Info */}
       <motion.header
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="pt-4"
+        className="pt-6"
       >
-        <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">{today}</p>
-        <h1 className="text-[28px] leading-tight font-semibold tracking-tight mt-1">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold">{today}</p>
+        <h1 className="text-[32px] leading-tight font-bold tracking-tight mt-1">
           {greeting()},<br />
-          <span className="text-white/90">{player.name}.</span>
+          <span className="text-white/80">{player.name}</span>
         </h1>
       </motion.header>
 
-      {/* Identity / Level card */}
+      {/* Level and Role Card */}
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.05 }}
-        className="mt-7 rounded-[28px] bg-[#111111] border border-[#1F1F1F] p-6"
+        className="mt-8 rounded-[28px] bg-[#111111] border border-[#2A2A2A] p-6 shadow-xl"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Identity</p>
-            <p className="text-[17px] font-medium mt-1.5 text-white">
-              {role ? role.name : 'No active role'}
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold">Active Identity</p>
+            <p className="text-[18px] font-bold mt-1 text-white">
+              {role ? role.name : 'Initiate'}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">Level</p>
-            <p className="text-[32px] font-semibold tabular-nums leading-none mt-1">{player.level}</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold">Level</p>
+            <p className="text-[36px] font-bold tabular-nums leading-none mt-1">{player.level}</p>
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-7">
           <div className="flex items-baseline justify-between mb-2">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Progress</p>
-            <p className="text-[11px] tabular-nums text-white/60">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold">Experience Progress</p>
+            <p className="text-[11px] font-bold tabular-nums text-white/60">
               {player.xp} / {player.xpToNext} XP
             </p>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+          <div className="h-2 w-full rounded-full bg-[#1A1A1A] overflow-hidden border border-[#2A2A2A]">
             <motion.div
-              className="h-full rounded-full bg-white"
+              className="h-full rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]"
               initial={{ width: 0 }}
               animate={{ width: `${xpPct}%` }}
-              transition={{ duration: 0.9, ease: 'easeOut' }}
-              style={{ boxShadow: '0 0 12px rgba(255,255,255,0.35)' }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
             />
           </div>
         </div>
       </motion.section>
 
-      {/* Today's Main Quest */}
-      <SectionHeader title="Main Quest" action={mainQuest ? 'View' : 'Set'} onAction={() => onOpenTab('mains')} />
-      <motion.button
-        type="button"
-        onClick={() => onOpenTab('mains')}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="w-full text-left rounded-[24px] bg-[#111111] border border-[#1F1F1F] p-5 active:scale-[0.99] transition-transform"
-      >
-        {mainQuest ? (
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[15px] font-medium text-white truncate">{mainQuest.title}</p>
-              <ChevronRight size={18} className="text-white/30 shrink-0" />
-            </div>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="flex-1 h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                <div
-                  className="h-full bg-white/80 rounded-full transition-all"
-                  style={{ width: `${mainPct}%` }}
-                />
-              </div>
-              <p className="text-[11px] tabular-nums text-white/50 w-12 text-right">
-                {mainDone}/{mainTotal}
-              </p>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-between">
-            <p className="text-[14px] text-white/50">No main quest yet</p>
-            <ChevronRight size={18} className="text-white/30" />
-          </div>
-        )}
-      </motion.button>
-
-      {/* Daily Quests */}
-      <SectionHeader title="Today" action="All" onAction={() => onOpenTab('daily')} />
-      <div className="space-y-2.5">
+      {/* Today's Daily Quests */}
+      <SectionHeader title="Today's Quests" action="All Quests" onAction={() => onOpenTab('daily')} />
+      <div className="space-y-3">
         {dailies.length === 0 && (
           <button
             onClick={() => onOpenTab('daily')}
-            className="w-full rounded-[20px] bg-[#111111] border border-dashed border-[#2A2A2A] p-5 text-[13px] text-white/50 hover:text-white/80 hover:border-white/20 transition-colors"
+            className="w-full rounded-[24px] bg-[#111111] border border-dashed border-[#2A2A2A] p-6 text-[13px] text-white/50 hover:text-white/80 hover:border-white/20 transition-colors"
           >
-            Accept your daily quests
+            Accept today's quests
           </button>
         )}
         {dailies.map((q, i) => (
@@ -150,10 +108,10 @@ export default function HomeTab({ player, onCompleteQuest, onOpenTab }: HomeTabP
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.05 * i }}
-            className={`flex items-center gap-4 rounded-[20px] border p-4 transition-all ${
+            className={`flex items-center gap-4 rounded-[24px] border p-4.5 transition-all ${
               q.completed
-                ? 'bg-[#0C0C0C] border-[#1A1A1A] opacity-60'
-                : 'bg-[#111111] border-[#1F1F1F]'
+                ? 'bg-[#0B0B0B] border-[#1C1C1C] opacity-50'
+                : 'bg-[#111111] border-[#2A2A2A]'
             }`}
           >
             <button
@@ -163,16 +121,16 @@ export default function HomeTab({ player, onCompleteQuest, onOpenTab }: HomeTabP
               className={`shrink-0 h-7 w-7 rounded-full border flex items-center justify-center transition-all ${
                 q.completed
                   ? 'bg-white border-white text-black'
-                  : 'border-white/25 hover:border-white/60 hover:bg-white/5'
+                  : 'border-white/20 hover:border-white/60 hover:bg-white/5'
               }`}
             >
               {q.completed && <Check size={14} strokeWidth={3} />}
             </button>
             <div className="flex-1 min-w-0">
-              <p className={`text-[14px] font-medium truncate ${q.completed ? 'line-through text-white/40' : 'text-white'}`}>
+              <p className={`text-[14px] font-bold truncate ${q.completed ? 'line-through text-white/40' : 'text-white'}`}>
                 {q.title}
               </p>
-              <p className="text-[11px] text-white/40 mt-0.5 capitalize">
+              <p className="text-[11px] text-white/40 mt-0.5 font-medium uppercase tracking-wider">
                 +{q.xpReward} XP · {q.difficulty}
               </p>
             </div>
@@ -180,27 +138,27 @@ export default function HomeTab({ player, onCompleteQuest, onOpenTab }: HomeTabP
         ))}
       </div>
 
-      {/* Quick Stats */}
-      <SectionHeader title="Stats" action="Sheet" onAction={() => onOpenTab('dashboard')} />
-      <div className="grid grid-cols-2 gap-3">
+      {/* Quick Stats Grid */}
+      <SectionHeader title="Core Stats" action="Status Sheet" onAction={() => onOpenTab('dashboard')} />
+      <div className="grid grid-cols-2 gap-3.5">
         {QUICK_STATS.map((s, i) => {
           const Icon = s.icon;
           const val = player.stats[s.key] || 0;
-          const pct = Math.min(100, val);
+          const pct = Math.min(100, (val / 100) * 100);
           return (
             <motion.div
               key={s.key}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.05 * i }}
-              className="rounded-[22px] bg-[#111111] border border-[#1F1F1F] p-4"
+              className="rounded-[24px] bg-[#111111] border border-[#2A2A2A] p-5"
             >
               <div className="flex items-center justify-between mb-4">
-                <Icon size={16} className="text-white/60" strokeWidth={1.75} />
-                <span className="text-[20px] font-semibold tabular-nums leading-none">{val}</span>
+                <Icon size={18} className="text-white/50" strokeWidth={1.5} />
+                <span className="text-[22px] font-bold tabular-nums leading-none">{val}</span>
               </div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-white/40 mb-2">{s.label}</p>
-              <div className="h-[3px] w-full rounded-full bg-white/[0.06] overflow-hidden">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold mb-3">{s.label}</p>
+              <div className="h-[2px] w-full rounded-full bg-[#1A1A1A] overflow-hidden border border-[#2A2A2A]/50">
                 <motion.div
                   className="h-full bg-white/80 rounded-full"
                   initial={{ width: 0 }}
@@ -220,12 +178,12 @@ function SectionHeader({
   title, action, onAction,
 }: { title: string; action?: string; onAction?: () => void }) {
   return (
-    <div className="flex items-end justify-between mt-9 mb-3">
-      <h2 className="text-[19px] font-semibold tracking-tight">{title}</h2>
+    <div className="flex items-end justify-between mt-10 mb-4 px-1">
+      <h2 className="text-[20px] font-bold tracking-tight">{title}</h2>
       {action && (
         <button
           onClick={onAction}
-          className="text-[12px] text-white/50 hover:text-white transition-colors"
+          className="text-[12px] font-bold text-white/40 hover:text-white transition-colors uppercase tracking-wider"
         >
           {action}
         </button>

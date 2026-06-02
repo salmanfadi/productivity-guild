@@ -4,14 +4,14 @@ import {
   getXpReward, getCoinReward, suggestStatRewards, suggestCategory,
   ALL_STATS, QUEST_CATEGORIES,
 } from '@/lib/game-system';
-import { Plus, X, Shield, Zap, Swords, Flame, Coins, Sparkles, Minus } from 'lucide-react';
+import { Plus, X, Shield, Zap, Swords, Flame, Sparkles, Minus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-const DIFFICULTIES: { key: Difficulty; label: string; icon: typeof Shield; color: string }[] = [
-  { key: 'easy', label: 'Easy', icon: Shield, color: 'glow-success' },
-  { key: 'medium', label: 'Medium', icon: Zap, color: 'glow-primary' },
-  { key: 'hard', label: 'Hard', icon: Swords, color: 'glow-accent' },
-  { key: 'boss', label: 'Boss', icon: Flame, color: 'glow-warning' },
+const DIFFICULTIES: { key: Difficulty; label: string; icon: typeof Shield }[] = [
+  { key: 'easy', label: 'Easy', icon: Shield },
+  { key: 'medium', label: 'Medium', icon: Zap },
+  { key: 'hard', label: 'Hard', icon: Swords },
+  { key: 'boss', label: 'Boss', icon: Flame },
 ];
 
 const QUEST_TYPES: { key: QuestType; label: string }[] = [
@@ -19,10 +19,9 @@ const QUEST_TYPES: { key: QuestType; label: string }[] = [
   { key: 'main', label: 'Main' },
 ];
 
-const CATEGORIES: { key: 'core' | 'secondary' | 'hidden'; label: string }[] = [
-  { key: 'core', label: 'Core' },
-  { key: 'secondary', label: 'Secondary' },
-  { key: 'hidden', label: 'Hidden' },
+const CATEGORIES: { key: 'core' | 'secondary'; label: string }[] = [
+  { key: 'core', label: 'Core Stats' },
+  { key: 'secondary', label: 'Secondary Stats' },
 ];
 
 const GROUPED_STATS = CATEGORIES.map(cat => ({
@@ -45,7 +44,7 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
   const [category, setCategory] = useState<QuestCategory | undefined>(undefined);
   const [categoryAuto, setCategoryAuto] = useState(true);
 
-  // Auto-suggest stats based on title — but only if user hasn't manually picked
+  // Auto-suggest stats based on title
   useEffect(() => {
     if (manuallyEdited) return;
     if (title.length > 3) {
@@ -76,7 +75,6 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
     setCategoryAuto(true);
   };
 
-
   if (!open) return null;
 
   const handleSubmit = () => {
@@ -101,150 +99,155 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
     });
   };
 
-
   const totalStatPoints = Object.values(statRewards).reduce<number>((a, b) => a + (b || 0), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 backdrop-blur-md animate-slide-up" onClick={handleClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-slide-up" onClick={handleClose}>
       <div
-        className="w-full max-w-md status-window rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto relative"
+        className="w-full max-w-md bg-[#111111] border border-[#2A2A2A] rounded-t-[32px] p-6 max-h-[90vh] overflow-y-auto relative"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Decorative top glow line */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-primary to-transparent" />
+        {/* Top subtle highlight */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[1px] w-3/4 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-5 pt-1">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center glow-primary">
-              <Sparkles size={14} className="text-primary" />
+        <div className="flex items-center justify-between mb-6 pt-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center">
+              <Sparkles size={14} className="text-white/60" />
             </div>
             <div>
-              <h3 className="font-display text-sm uppercase tracking-[0.2em] text-primary">New Quest</h3>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">System window</p>
+              <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white">Create Quest</h3>
+              <p className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">System Form</p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="w-8 h-8 rounded-lg bg-secondary border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] text-white/40 hover:text-white hover:border-white/20 transition-all flex items-center justify-center"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
 
-        {/* Title */}
-        <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 block font-display">Quest Description</label>
-        <input
-          type="text"
-          placeholder="e.g. Solve 2 LeetCode problems"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-          autoFocus
-          className="w-full bg-secondary/70 border border-border rounded-lg px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary/50 mb-5 transition-all"
-        />
-
-        {/* Quest Type */}
-        <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 block font-display">Type</label>
-        <div className="grid grid-cols-2 gap-2 mb-5">
-          {QUEST_TYPES.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setQuestType(t.key)}
-              className={`py-2.5 rounded-lg text-xs font-display uppercase tracking-wider transition-all ${
-                questType === t.key
-                  ? 'bg-primary/15 text-primary border border-primary/50 glow-primary'
-                  : 'bg-secondary/60 text-muted-foreground border border-border hover:border-primary/30'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* Quest Title Input */}
+        <div className="space-y-2 mb-5">
+          <label className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold block">Quest Title</label>
+          <input
+            type="text"
+            placeholder="e.g. Read 15 pages of book"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            autoFocus
+            className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-4 py-3 text-sm placeholder:text-white/20 focus:outline-none focus:border-white transition-all text-white"
+          />
         </div>
 
-        {/* Category */}
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] block font-display">
-            Category
-            {categoryAuto && category && (
-              <span className="ml-1.5 text-primary normal-case tracking-normal">· auto</span>
-            )}
-          </label>
-          {category && (
-            <button
-              onClick={() => { setCategory(undefined); setCategoryAuto(false); }}
-              className="text-[9px] text-muted-foreground hover:text-foreground uppercase tracking-wider"
-            >
-              clear
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-4 gap-1.5 mb-5">
-          {QUEST_CATEGORIES.map((c) => {
-            const selected = category === c.key;
-            return (
+        {/* Quest Type selector */}
+        <div className="space-y-2 mb-5">
+          <label className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold block">Quest Type</label>
+          <div className="grid grid-cols-2 gap-2.5">
+            {QUEST_TYPES.map((t) => (
               <button
-                key={c.key}
-                onClick={() => { setCategory(c.key); setCategoryAuto(false); }}
-                className={`flex flex-col items-center gap-0.5 py-2 rounded-lg text-[10px] font-display uppercase tracking-wider transition-all border ${
-                  selected
-                    ? 'bg-accent/15 text-accent border-accent/50 glow-accent'
-                    : 'bg-secondary/60 text-muted-foreground border-border hover:border-accent/30'
+                key={t.key}
+                onClick={() => setQuestType(t.key)}
+                className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                  questType === t.key
+                    ? 'bg-white border-white text-black'
+                    : 'bg-[#1A1A1A] text-white/40 border-[#2A2A2A] hover:border-white/20'
                 }`}
               >
-                <span className="text-sm leading-none">{c.emoji}</span>
-                <span className="text-[8px]">{c.label}</span>
+                {t.label}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
 
-        {/* Difficulty */}
-        <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 block font-display">Difficulty</label>
-        <div className="grid grid-cols-4 gap-2 mb-5">
-          {DIFFICULTIES.map((d) => {
-            const Icon = d.icon;
-            const selected = difficulty === d.key;
-            return (
-              <button
-                key={d.key}
-                onClick={() => setDifficulty(d.key)}
-                className={`flex flex-col items-center gap-1 p-2.5 rounded-lg text-xs transition-all ${
-                  selected
-                    ? 'bg-primary/15 text-primary border border-primary/50 glow-primary'
-                    : 'bg-secondary/60 text-muted-foreground hover:text-foreground border border-border hover:border-primary/30'
-                }`}
-              >
-                <Icon size={16} />
-                <span className="font-display uppercase tracking-wider text-[10px]">{d.label}</span>
-                <span className="text-[9px] opacity-70">+{getXpReward(d.key)}xp</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Stat Rewards */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-display">
-              Stat Rewards
-              {!manuallyEdited && Object.keys(statRewards).length > 0 && (
-                <span className="ml-1.5 text-primary normal-case tracking-normal">· auto</span>
+        {/* Categories grid selector */}
+        <div className="space-y-2 mb-5">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold block">
+              Category
+              {categoryAuto && category && (
+                <span className="ml-1.5 text-white/30 lowercase tracking-normal">· auto</span>
               )}
             </label>
-            <span className="text-[10px] font-display text-primary">
-              {totalStatPoints > 0 ? `+${totalStatPoints} pts` : 'none'}
+            {category && (
+              <button
+                onClick={() => { setCategory(undefined); setCategoryAuto(false); }}
+                className="text-[9px] text-white/40 hover:text-white uppercase tracking-wider font-semibold"
+              >
+                clear
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {QUEST_CATEGORIES.map((c) => {
+              const selected = category === c.key;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => { setCategory(c.key); setCategoryAuto(false); }}
+                  className={`flex flex-col items-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                    selected
+                      ? 'bg-white text-black border-white'
+                      : 'bg-[#1A1A1A] text-white/40 border-[#2A2A2A] hover:border-white/20'
+                  }`}
+                >
+                  <span className="text-sm leading-none">{c.emoji}</span>
+                  <span className="text-[8px] tracking-wide">{c.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Difficulty buttons */}
+        <div className="space-y-2 mb-5">
+          <label className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold block">Difficulty Level</label>
+          <div className="grid grid-cols-4 gap-2.5">
+            {DIFFICULTIES.map((d) => {
+              const selected = difficulty === d.key;
+              return (
+                <button
+                  key={d.key}
+                  onClick={() => setDifficulty(d.key)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${
+                    selected
+                      ? 'bg-white text-black border-white'
+                      : 'bg-[#1A1A1A] text-white/40 border-[#2A2A2A] hover:border-white/20'
+                  }`}
+                >
+                  <span className="font-bold uppercase tracking-wider text-[9px]">{d.label}</span>
+                  <span className="text-[8px] opacity-75 font-semibold">+{getXpReward(d.key)} XP</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stat reward Allocation sliders */}
+        <div className="space-y-2 mb-6">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold block">
+              Quest Rewards
+              {!manuallyEdited && Object.keys(statRewards).length > 0 && (
+                <span className="ml-1.5 text-white/30 lowercase tracking-normal">· auto</span>
+              )}
+            </label>
+            <span className="text-[10px] font-bold text-white/50">
+              {totalStatPoints > 0 ? `+${totalStatPoints} Stat Points` : 'none'}
             </span>
           </div>
 
           <TooltipProvider>
-            <div className="space-y-3 bg-secondary/30 border border-border rounded-lg p-3">
+            <div className="space-y-4 bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4.5">
               {GROUPED_STATS.map((g) => (
-                <div key={g.key}>
-                  <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mb-1.5 font-display">
+                <div key={g.key} className="space-y-2">
+                  <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold">
                     {g.label}
                   </p>
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-3 gap-2">
                     {g.stats.map((s) => {
                       const val = statRewards[s.key] || 0;
                       const active = val > 0;
@@ -252,40 +255,44 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
                         <Tooltip key={s.key}>
                           <TooltipTrigger asChild>
                             <div
-                              className={`flex items-center justify-between rounded-md border transition-all px-1.5 py-1 cursor-help ${
+                              className={`flex items-center justify-between rounded-xl border transition-all px-2 py-1 cursor-help ${
                                 active
-                                  ? 'bg-primary/15 border-primary/50'
-                                  : 'bg-secondary/60 border-border'
+                                  ? 'bg-white border-white text-black'
+                                  : 'bg-[#111111] border-[#2A2A2A] text-white/40'
                               }`}
                             >
                               <button
                                 onClick={() => setStat(s.key, val - 1)}
                                 disabled={!active}
-                                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-20"
+                                className={`w-5 h-5 rounded flex items-center justify-center disabled:opacity-20 ${
+                                  active ? 'text-black/50 hover:text-black' : 'text-white/40 hover:text-white'
+                                }`}
                                 aria-label={`Decrease ${s.label}`}
                               >
                                 <Minus size={10} />
                               </button>
-                              <div className="flex flex-col items-center leading-none pointer-events-none">
-                                <span className={`text-[10px] font-display font-bold ${active ? 'text-primary' : 'text-foreground'}`}>
-                                  {s.label}
+                              <div className="flex flex-col items-center leading-none">
+                                <span className="text-[9px] font-bold">
+                                  {s.label.toUpperCase()}
                                 </span>
-                                <span className="text-[8px] text-muted-foreground mt-0.5">
+                                <span className="text-[8px] mt-0.5 opacity-80">
                                   {active ? `+${val}` : '—'}
                                 </span>
                               </div>
                               <button
                                 onClick={() => setStat(s.key, val + 1)}
-                                className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-primary"
+                                className={`w-5 h-5 rounded flex items-center justify-center ${
+                                  active ? 'text-black/50 hover:text-black' : 'text-white/40 hover:text-white'
+                                }`}
                                 aria-label={`Increase ${s.label}`}
                               >
                                 <Plus size={10} />
                               </button>
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs font-display uppercase tracking-wider">{s.fullLabel}</p>
-                            <p className="text-[10px] text-muted-foreground">{s.description}</p>
+                          <TooltipContent className="bg-[#111111] border border-[#2A2A2A] text-white">
+                            <p className="text-[10px] font-bold uppercase tracking-wider">{s.fullLabel}</p>
+                            <p className="text-[9px] text-white/40">{s.description}</p>
                           </TooltipContent>
                         </Tooltip>
                       );
@@ -297,25 +304,13 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
           </TooltipProvider>
         </div>
 
-        {/* Rewards preview */}
-        <div className="flex items-center justify-between mb-4 px-3 py-2.5 rounded-lg bg-secondary/40 border border-border">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-display">Rewards</span>
-          <div className="flex items-center gap-3 text-xs font-display">
-            <span className="flex items-center gap-1 text-primary">
-              <Zap size={12} /> +{getXpReward(difficulty)} XP
-            </span>
-            <span className="flex items-center gap-1" style={{ color: 'hsl(var(--glow-warning))' }}>
-              <Coins size={12} /> +{getCoinReward(difficulty)}
-            </span>
-          </div>
-        </div>
-
+        {/* Submit */}
         <button
           onClick={handleSubmit}
           disabled={!title.trim()}
-          className="w-full py-3.5 rounded-lg bg-gradient-to-r from-primary via-primary to-accent text-primary-foreground font-display text-sm uppercase tracking-[0.2em] font-bold disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:glow-primary active:scale-[0.99]"
+          className="w-full py-4 rounded-[24px] bg-white text-black font-bold text-xs uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/90 active:scale-[0.99] transition-all shadow-lg"
         >
-          ⚔ Accept Quest
+          Accept System Quest
         </button>
       </div>
     </div>
