@@ -6,7 +6,7 @@ import {
 import { ALL_STATS, type StatKey } from '@/lib/game-system';
 import {
   Activity, Moon, Battery, Smile, Dumbbell, BrainCircuit, Smartphone, Thermometer,
-  Sparkles, ShieldAlert, CheckCircle2, Plus,
+  Sparkles, ShieldAlert, CheckCircle2, Plus, Flame, Beef,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -77,6 +77,11 @@ export default function DailyCheckInTab({ store, onSave, onAcceptRecoveryQuest }
                    onChange={(v) => set('workoutDone', v)} />
         <ToggleRow icon={Thermometer} label="Feeling Sick Today" value={draft.sick} danger
                    onChange={(v) => set('sick', v)} />
+
+        <NumberRow icon={Flame} label="Calorie Intake" value={draft.calories ?? 0} suffix="kcal" step={50}
+                   onChange={(v) => set('calories', v)} />
+        <NumberRow icon={Beef}  label="Protein Intake" value={draft.protein ?? 0}  suffix="g"    step={5}
+                   onChange={(v) => set('protein', v)} />
       </div>
 
       {/* Active Modifiers */}
