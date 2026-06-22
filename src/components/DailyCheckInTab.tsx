@@ -6,7 +6,7 @@ import {
 import { ALL_STATS, type StatKey } from '@/lib/game-system';
 import {
   Activity, Moon, Battery, Smile, Dumbbell, BrainCircuit, Smartphone, Thermometer,
-  Sparkles, ShieldAlert, CheckCircle2, Plus,
+  Sparkles, ShieldAlert, CheckCircle2, Plus, Flame, Beef,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -77,6 +77,11 @@ export default function DailyCheckInTab({ store, onSave, onAcceptRecoveryQuest }
                    onChange={(v) => set('workoutDone', v)} />
         <ToggleRow icon={Thermometer} label="Feeling Sick Today" value={draft.sick} danger
                    onChange={(v) => set('sick', v)} />
+
+        <NumberRow icon={Flame} label="Calorie Intake" value={draft.calories ?? 0} suffix="kcal" step={50}
+                   onChange={(v) => set('calories', v)} />
+        <NumberRow icon={Beef}  label="Protein Intake" value={draft.protein ?? 0}  suffix="g"    step={5}
+                   onChange={(v) => set('protein', v)} />
       </div>
 
       {/* Active Modifiers */}
@@ -211,5 +216,37 @@ function ToggleRow({
       </span>
       <span className="text-[10px] font-bold tracking-widest">{value ? 'YES' : 'NO'}</span>
     </button>
+  );
+}
+
+function NumberRow({
+  icon: Icon, label, value, suffix, step = 1, onChange,
+}: { icon: any; label: string; value: number; suffix?: string; step?: number; onChange: (v: number) => void; }) {
+  const dec = () => onChange(Math.max(0, value - step));
+  const inc = () => onChange(value + step);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-2 text-[11px] text-white/50 uppercase tracking-wider font-semibold">
+          <Icon size={14} className="text-white/40" /> {label}
+        </span>
+        <span className="text-xs font-bold text-white tabular-nums">{value}{suffix}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button onClick={dec}
+          className="w-10 h-10 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A] text-white/60 hover:border-white/30 active:scale-95 transition-all flex items-center justify-center font-bold">
+          −
+        </button>
+        <input
+          type="number" inputMode="numeric" min={0} value={value}
+          onChange={(e) => onChange(Math.max(0, parseInt(e.target.value || '0', 10)))}
+          className="flex-1 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl px-3 py-2.5 text-sm text-white text-center font-bold tabular-nums focus:outline-none focus:border-white transition-all"
+        />
+        <button onClick={inc}
+          className="w-10 h-10 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A] text-white/60 hover:border-white/30 active:scale-95 transition-all flex items-center justify-center font-bold">
+          +
+        </button>
+      </div>
+    </div>
   );
 }

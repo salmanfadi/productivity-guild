@@ -1,10 +1,9 @@
 import { type StatKey, ALL_STATS, type HunterStats } from '@/lib/game-system';
-import { Plus, Sword, Brain, Heart, Wind, Eye, Zap, Code, Palette, MessageSquare, ShieldCheck, Timer, Dice4, Star, Shield, Activity } from 'lucide-react';
+import { Plus, Sword, Brain, Eye, Zap, Code, MessageSquare, ShieldCheck, Timer } from 'lucide-react';
 
 const STAT_ICONS: Record<StatKey, typeof Sword> = {
-  str: Sword, sta: Timer, dis: ShieldCheck, foc: Eye, int: Brain, eq: Heart,
-  tech: Code, cre: Palette, com: MessageSquare, conf: Zap, cons: Wind,
-  luk: Dice4, rep: Star, res: Shield, hp: Activity,
+  str: Sword, sta: Timer, dis: ShieldCheck, foc: Eye, int: Brain,
+  tech: Code, com: MessageSquare, conf: Zap,
 };
 
 interface StatAllocationProps {
@@ -17,7 +16,6 @@ export default function StatAllocation({ stats, statPoints, onAllocate }: StatAl
   const categories = [
     { label: 'Core Stats', stats: ALL_STATS.filter(s => s.category === 'core') },
     { label: 'Secondary Stats', stats: ALL_STATS.filter(s => s.category === 'secondary') },
-    { label: 'Hidden Stats', stats: ALL_STATS.filter(s => s.category === 'hidden') },
   ];
 
   return (
@@ -56,7 +54,7 @@ export default function StatAllocation({ stats, statPoints, onAllocate }: StatAl
                       />
                     </div>
                   </div>
-                  {statPoints > 0 && s.category !== 'hidden' && (
+                  {statPoints > 0 && (
                     <button
                       onClick={() => onAllocate(s.key)}
                       className="w-6 h-6 rounded-md bg-primary/20 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors shrink-0"

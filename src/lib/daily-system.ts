@@ -12,6 +12,8 @@ export interface DailyCheckIn {
   deepWorkHours: number;   // 0..10
   distractionHours: number;// 0..10 (social/screen)
   weight?: number;         // optional kg
+  calories?: number;       // kcal intake today
+  protein?: number;        // grams of protein today
 }
 
 export type StatModifiers = Partial<Record<StatKey, number>>; // % multipliers, e.g. -0.15
@@ -34,6 +36,7 @@ export function defaultCheckIn(date = todayStr()): DailyCheckIn {
     date, sleepHours: 7, energy: 3, mood: 3,
     sick: false, workoutDone: false,
     deepWorkHours: 0, distractionHours: 0,
+    calories: 0, protein: 0,
   };
 }
 
