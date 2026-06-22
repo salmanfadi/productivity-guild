@@ -148,12 +148,12 @@ export default function AddQuestModal({ open, onClose, onAdd }: AddQuestModalPro
         {/* Quest Type selector */}
         <div className="space-y-2 mb-5">
           <label className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-bold block">Quest Type</label>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-4 gap-2">
             {QUEST_TYPES.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setQuestType(t.key)}
-                className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                className={`py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
                   questType === t.key
                     ? 'bg-white border-white text-black'
                     : 'bg-[#1A1A1A] text-white/40 border-[#2A2A2A] hover:border-white/20'
