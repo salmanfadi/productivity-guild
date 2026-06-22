@@ -16,6 +16,8 @@ const DIFFICULTIES: { key: Difficulty; label: string; icon: typeof Shield }[] = 
 
 const QUEST_TYPES: { key: QuestType; label: string }[] = [
   { key: 'custom', label: 'Custom' },
+  { key: 'daily', label: 'Daily' },
+  { key: 'weekly', label: 'Weekly' },
   { key: 'main', label: 'Main' },
 ];
 
