@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   type PlayerState, type Difficulty, type StatKey, type QuestType, type QuestCategory,
   type MainQuest,
-  createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getRank, getXpToNext,
+  createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getDefaultStats, getRank, getXpToNext,
   maybeGenerateRandomEvent, createSystemMessage,
   getUnlockedRoles, ALL_ROLES,
 } from '@/lib/game-system';
