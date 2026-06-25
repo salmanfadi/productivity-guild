@@ -27,54 +27,38 @@ const REVERSE_STATS_MAP: Record<string, StatKey> = {
   confidence: 'conf'
 };
 
-// Zero-friction device persistent login
+// Single shared user for the whole app — every login sees the same data
+const SINGLE_USER_ID = '00000000-0000-0000-0000-000000000001';
+
 export async function getOrCreateUserId(): Promise<string> {
-  let userId = localStorage.getItem('solo_leveling_user_id');
-  if (userId) {
-    // Verify user exists in DB
-    const { data, error } = await supabase.from('users').select('id').eq('id', userId).maybeSingle();
-    if (data && !error) {
-      return userId;
-    }
+  const userId = SINGLE_USER_ID;
+
+  // Ensure user row exists
+  const { data: existing } = await supabase.from('users').select('id').eq('id', userId).maybeSingle();
+
+  if (!existing) {
+    const { error: userError } = await supabase.from('users').insert({
+      id: userId,
+      name: 'Hunter',
+      level: 1,
+      xp: 0,
+      coins: 0,
+      active_role: 'initiate'
+    });
+    if (userError) console.error('Error creating user row:', userError);
+
+    const { error: statsError } = await supabase.from('player_stats').insert({
+      user_id: userId,
+      strength: 5, stamina: 5, discipline: 5, focus: 5,
+      intelligence: 5, technical: 5, communication: 5, confidence: 5
+    });
+    if (statsError) console.error('Error creating stats row:', statsError);
   }
 
-  // Create a new user
-  const newId = crypto.randomUUID();
-  const { error: userError } = await supabase.from('users').insert({
-    id: newId,
-    name: 'Hunter',
-    level: 1,
-    xp: 0,
-    coins: 0,
-    active_role: 'initiate'
-  });
-
-  if (userError) {
-    console.error('Error creating user row in Supabase:', userError);
-    // Return a dummy or local UUID if connection fails, ensuring robustness
-    return userId || newId;
-  }
-
-  // Create default stats entry
-  const { error: statsError } = await supabase.from('player_stats').insert({
-    user_id: newId,
-    strength: 5,
-    stamina: 5,
-    discipline: 5,
-    focus: 5,
-    intelligence: 5,
-    technical: 5,
-    communication: 5,
-    confidence: 5
-  });
-
-  if (statsError) {
-    console.error('Error creating stats row in Supabase:', statsError);
-  }
-
-  localStorage.setItem('solo_leveling_user_id', newId);
-  return newId;
+  localStorage.setItem('solo_leveling_user_id', userId);
+  return userId;
 }
+
 
 // Fetch complete state from Supabase
 export async function fetchFullState(userId: string): Promise<{ player: PlayerState; checkins: DailyCheckIn[] } | null> {
