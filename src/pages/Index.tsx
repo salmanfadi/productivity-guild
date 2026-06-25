@@ -66,6 +66,27 @@ export default function Index() {
     initSync();
   }, []);
 
+  // Re-fetch whenever the tab regains focus / becomes visible,
+  // so unfinished quests from the DB show up without a manual refresh.
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = async () => {
+      const fresh = await fetchFullState(userId);
+      if (fresh) {
+        setPlayer(fresh.player);
+        setDaily({ history: fresh.checkins });
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [userId]);
+
+
   // Subscribe to real-time updates for syncing across devices
   useEffect(() => {
     if (!userId) return;
