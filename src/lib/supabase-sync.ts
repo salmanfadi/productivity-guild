@@ -103,8 +103,13 @@ export async function fetchFullState(userId: string): Promise<{ player: PlayerSt
       conf: dbStats.confidence ?? 5
     };
 
-    // Transform quests
-    const quests: Quest[] = (questsRes.data || []).map((q: any) => {
+    const now = Date.now();
+
+    // Transform quests. Future-dated rows are used for scheduled repeats and
+    // become visible when their created_at date arrives.
+    const quests: Quest[] = (questsRes.data || []).filter((q: any) => {
+      return new Date(q.created_at).getTime() <= now;
+    }).map((q: any) => {
       const statRewards: Partial<Record<StatKey, number>> = {};
       (q.quest_rewards || []).forEach((r: any) => {
         const key = REVERSE_STATS_MAP[r.stat_name];

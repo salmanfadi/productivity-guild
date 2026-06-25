@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion';
 import { Check, ChevronRight, Dumbbell, Eye, ShieldCheck, Brain } from 'lucide-react';
 import type { PlayerState, StatKey } from '@/lib/game-system';
+import type { Tab } from '@/components/BottomNav';
 import { ALL_ROLES } from '@/lib/game-system';
 
 interface HomeTabProps {
   player: PlayerState;
   onCompleteQuest: (id: string) => void;
-  onOpenTab: (tab: any) => void;
+  onOpenTab: (tab: Tab) => void;
+  onOpenQuests: (subTab?: 'all' | 'active' | 'daily' | 'weekly') => void;
 }
 
 const QUICK_STATS: { key: StatKey; label: string; icon: typeof Dumbbell }[] = [
@@ -25,7 +27,7 @@ function greeting() {
   return 'Good night';
 }
 
-export default function HomeTab({ player, onCompleteQuest, onOpenTab }: HomeTabProps) {
+export default function HomeTab({ player, onCompleteQuest, onOpenTab, onOpenQuests }: HomeTabProps) {
   const role = ALL_ROLES.find((r) => r.id === player.activeRole);
   const xpPct = Math.min(100, Math.round((player.xp / player.xpToNext) * 100));
 
@@ -92,11 +94,11 @@ export default function HomeTab({ player, onCompleteQuest, onOpenTab }: HomeTabP
       </motion.section>
 
       {/* Today's Daily Quests */}
-      <SectionHeader title="Today's Quests" action="All Quests" onAction={() => onOpenTab('daily')} />
+      <SectionHeader title="Today's Quests" action="All Quests" onAction={() => onOpenQuests('all')} />
       <div className="space-y-3">
         {dailies.length === 0 && (
           <button
-            onClick={() => onOpenTab('daily')}
+            onClick={() => onOpenQuests('daily')}
             className="w-full rounded-[24px] bg-[#111111] border border-dashed border-[#2A2A2A] p-6 text-[13px] text-white/50 hover:text-white/80 hover:border-white/20 transition-colors"
           >
             Accept today's quests

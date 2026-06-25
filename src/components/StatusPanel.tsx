@@ -3,7 +3,7 @@ import { Coins, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const RANK_COLORS: Record<Rank, string> = {
-  E: 'text-white/40', D: 'text-white/60', C: 'text-white/80',
+  E: 'text-white/45', D: 'text-white/60', C: 'text-white/80',
   B: 'text-white', A: 'text-white font-bold', S: 'text-white font-black',
 };
 
@@ -17,55 +17,53 @@ export default function StatusPanel({ player }: StatusPanelProps) {
   const activeRole = ALL_ROLES.find(r => r.id === player.activeRole);
 
   return (
-    <div className="rounded-[24px] bg-[#111111] border border-[#2A2A2A] p-5 shadow-lg space-y-4">
-      {/* Profile summary */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-11 h-11 rounded-xl bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center">
-              <span className="text-sm font-bold text-white">{player.level}</span>
+    <section className="rounded-lg bg-card border border-border p-4 shadow-lg space-y-4" aria-label="Character status">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative shrink-0">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary border border-border">
+              <span className="text-base font-bold text-white tabular-nums">{player.level}</span>
             </div>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded bg-black border border-[#2A2A2A] flex items-center justify-center">
-              <span className={`text-[8px] font-bold ${RANK_COLORS[rank]}`}>{rank}</span>
+            <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded bg-background border border-border">
+              <span className={`text-[10px] font-bold ${RANK_COLORS[rank]}`}>{rank}</span>
             </div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold tracking-tight text-white">{player.name}</h2>
-            <p className="text-[9px] text-white/40 uppercase tracking-widest font-semibold mt-0.5">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-bold tracking-tight text-white">{player.name}</h2>
+            <p className="mt-1 truncate text-xs text-white/45 uppercase tracking-wide font-semibold">
               {activeRole ? activeRole.name : 'Hunter'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-semibold text-white/50">
-          <div className="flex items-center gap-1 text-white">
-            <Coins size={12} className="text-white/40" />
+        <div className="flex shrink-0 items-center gap-3 text-sm font-semibold text-white/70">
+          <div className="flex items-center gap-1.5 text-white" aria-label={`${player.coins} coins`}>
+            <Coins size={14} className="text-white/45" />
             <span className="tabular-nums">{player.coins}</span>
           </div>
           {player.streak > 0 && (
-            <div className="flex items-center gap-1 text-white">
-              <Flame size={12} className="text-white/40" />
+            <div className="flex items-center gap-1.5 text-white" aria-label={`${player.streak} day streak`}>
+              <Flame size={14} className="text-white/45" />
               <span className="tabular-nums">{player.streak}d</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Mini XP bar */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-[9px] font-bold uppercase tracking-wider text-white/30">
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs font-bold uppercase tracking-wide text-white/40">
           <span>EXP</span>
           <span className="tabular-nums">{player.xp} / {player.xpToNext}</span>
         </div>
-        <div className="h-1 bg-[#1A1A1A] rounded-full overflow-hidden border border-[#2A2A2A]/40">
+        <div className="h-2 overflow-hidden rounded bg-secondary border border-border/60" aria-hidden="true">
           <motion.div
-            className="h-full bg-white rounded-full"
+            className="h-full bg-white"
             initial={{ width: 0 }}
             animate={{ width: `${xpPercent}%` }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.3 }}
           />
         </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
-  type PlayerState, type Difficulty, type StatKey, type QuestType, type QuestCategory,
+  type PlayerState, type Quest, type Difficulty, type StatKey, type QuestType, type QuestCategory,
   type MainQuest,
   createQuest, getDailyQuests, getWeeklyQuests, getDefaultState, getDefaultStats, getRank, getXpToNext,
   maybeGenerateRandomEvent, createSystemMessage,
@@ -32,7 +32,7 @@ export default function Index() {
   const [player, setPlayer] = useState<PlayerState>(getDefaultState());
   const [daily, setDaily] = useState<DailyStore>(loadDaily);
   const [tab, setTab] = useState<Tab>('home');
-  const [questSubTab, setQuestSubTab] = useState<'active' | 'daily' | 'weekly'>('active');
+  const [questSubTab, setQuestSubTab] = useState<'all' | 'active' | 'daily' | 'weekly'>('all');
   const [showAddQuest, setShowAddQuest] = useState(false);
   const [levelUpShow, setLevelUpShow] = useState(false);
   const [syncing, setSyncing] = useState(true);
@@ -229,6 +229,31 @@ export default function Index() {
     }
   };
 
+  const handleRepeatTomorrow = async (quest: Quest) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const repeatedQuest: Quest = {
+      ...quest,
+      id: crypto.randomUUID(),
+      completed: false,
+      createdAt: tomorrow.getTime(),
+    };
+
+    setPlayer((prev) => ({
+      ...prev,
+      systemMessages: [
+        ...prev.systemMessages,
+        createSystemMessage(`Scheduled daily quest for tomorrow: ${quest.title}`, 'info'),
+      ],
+    }));
+
+    if (userId) {
+      await createQuestInDB(userId, repeatedQuest);
+    }
+  };
+
   const handleAllocateStat = async (stat: StatKey) => {
     // Standard stat leveling logic, increment stat directly
     const updatedStats = {
@@ -357,6 +382,10 @@ export default function Index() {
   const activeQuests = player.quests.filter((q) => q.questType !== 'daily' && q.questType !== 'weekly');
   const dailyQuests = player.quests.filter((q) => q.questType === 'daily');
   const weeklyQuests = player.quests.filter((q) => q.questType === 'weekly');
+  const openQuestTab = (subTab: 'all' | 'active' | 'daily' | 'weekly' = 'all') => {
+    setQuestSubTab(subTab);
+    setTab('quests');
+  };
 
   if (syncing) {
     return (
@@ -384,28 +413,41 @@ export default function Index() {
             <HomeTab
               player={player}
               onCompleteQuest={handleCompleteQuest}
-              onOpenTab={(t) => setTab(t)}
+              onOpenTab={setTab}
+              onOpenQuests={openQuestTab}
             />
           )}
 
           {tab === 'quests' && (
             <div className="space-y-4">
-              {/* Segmented control for Quests */}
-              <div className="flex border border-[#2A2A2A] rounded-full p-1 bg-[#111111] max-w-sm mx-auto">
-                {(['active', 'daily', 'weekly'] as const).map((t) => (
+              <div className="grid grid-cols-4 rounded-lg border border-border bg-card p-1" role="tablist" aria-label="Quest filters">
+                {(['all', 'active', 'daily', 'weekly'] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setQuestSubTab(t)}
-                    className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all ${
+                    className={`min-h-11 rounded-md text-xs font-bold uppercase tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                       questSubTab === t
                         ? 'bg-white text-black'
-                        : 'text-white/40 hover:text-white'
+                        : 'text-white/45 hover:text-white'
                     }`}
+                    role="tab"
+                    aria-selected={questSubTab === t}
                   >
                     {t}
                   </button>
                 ))}
               </div>
+
+              {questSubTab === 'all' && (
+                <QuestList
+                  quests={player.quests}
+                  onComplete={handleCompleteQuest}
+                  onDelete={handleDeleteQuest}
+                  onRepeatTomorrow={handleRepeatTomorrow}
+                  title="All Quests"
+                  emptyText="No quests yet. Add a custom quest or accept daily quests to begin."
+                />
+              )}
 
               {questSubTab === 'active' && (
                 <>
@@ -413,14 +455,15 @@ export default function Index() {
                     quests={activeQuests}
                     onComplete={handleCompleteQuest}
                     onDelete={handleDeleteQuest}
+                    onRepeatTomorrow={handleRepeatTomorrow}
                     title="Active Quests"
-                    emptyText="No active custom quests. Add one below!"
+                    emptyText="No active custom quests. Add one below."
                   />
                   <button
                     onClick={() => setShowAddQuest(true)}
-                    className="w-full mt-4 py-4 rounded-[24px] border border-dashed border-[#2A2A2A] text-white/50 text-[13px] flex items-center justify-center gap-2 hover:border-white/20 hover:text-white transition-colors bg-[#111111]/30"
+                    className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card/50 text-sm font-bold text-white/55 transition-colors hover:border-white/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
-                    <Plus size={15} />
+                    <Plus size={16} />
                     New Custom Quest
                   </button>
                 </>
@@ -431,7 +474,7 @@ export default function Index() {
                   {dailyQuests.length === 0 && (
                     <button
                       onClick={handleLoadDailies}
-                      className="w-full py-4 rounded-[24px] bg-white text-black font-bold text-xs uppercase tracking-widest hover:bg-white/90 active:scale-[0.99] transition-all"
+                      className="min-h-12 w-full rounded-lg bg-white px-4 text-xs font-bold uppercase tracking-wide text-black transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                     >
                       Accept Daily Quests
                     </button>
@@ -440,8 +483,9 @@ export default function Index() {
                     quests={dailyQuests}
                     onComplete={handleCompleteQuest}
                     onDelete={handleDeleteQuest}
+                    onRepeatTomorrow={handleRepeatTomorrow}
                     title="Daily Quests"
-                    emptyText="Accept your daily quests above!"
+                    emptyText="Accept your daily quests above."
                   />
                 </>
               )}
@@ -451,7 +495,7 @@ export default function Index() {
                   {weeklyQuests.length === 0 && (
                     <button
                       onClick={handleLoadWeeklies}
-                      className="w-full py-4 rounded-[24px] border border-[#2A2A2A] bg-[#111111] text-white font-bold text-xs uppercase tracking-widest hover:border-white/30 active:scale-[0.99] transition-all"
+                      className="min-h-12 w-full rounded-lg border border-border bg-card px-4 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                     >
                       Accept Weekly Quests
                     </button>
@@ -460,8 +504,9 @@ export default function Index() {
                     quests={weeklyQuests}
                     onComplete={handleCompleteQuest}
                     onDelete={handleDeleteQuest}
+                    onRepeatTomorrow={handleRepeatTomorrow}
                     title="Weekly Quests"
-                    emptyText="Accept your weekly quests above!"
+                    emptyText="Accept your weekly quests above."
                   />
                 </>
               )}
