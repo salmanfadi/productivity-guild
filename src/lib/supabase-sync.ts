@@ -3,7 +3,7 @@ import {
   type PlayerState, type Quest, type HunterStats, type StatKey, type Difficulty, type QuestType, type QuestCategory,
   getDefaultState, getRank, getXpToNext, ALL_STATS
 } from './game-system';
-import { type DailyCheckIn, type DailyStore } from './daily-system';
+import { type DailyCheckIn, type DailyStore, calculateCheckInStreak } from './daily-system';
 
 const STATS_MAP: Record<StatKey, string> = {
   str: 'strength',
@@ -140,9 +140,15 @@ export async function fetchFullState(userId: string): Promise<{ player: PlayerSt
       mood: c.mood,
       sick: c.sick,
       workoutDone: c.workout_completed,
-      deepWorkHours: 0,
-      distractionHours: 0
+      deepWorkHours: Number(c.deep_work_hours ?? 0),
+      distractionHours: Number(c.distraction_hours ?? 0),
+      weight: c.weight === null || c.weight === undefined ? undefined : Number(c.weight),
+      calories: c.calories === null || c.calories === undefined ? undefined : Number(c.calories),
+      protein: c.protein === null || c.protein === undefined ? undefined : Number(c.protein)
     }));
+
+    checkins.sort((a, b) => a.date.localeCompare(b.date));
+    const streak = calculateCheckInStreak(checkins);
 
     const player: PlayerState = {
       name: user.name || 'Hunter',
@@ -155,8 +161,8 @@ export async function fetchFullState(userId: string): Promise<{ player: PlayerSt
       quests,
       mainQuests: [], // Unify under quests as database entries
       coins: user.coins || 0,
-      streak: 0,
-      bestStreak: 0,
+      streak,
+      bestStreak: streak,
       lastActiveDate: new Date().toISOString().slice(0, 10),
       totalQuestsCompleted: quests.filter(q => q.completed).length,
       dailyQuestsCompleted: quests.filter(q => q.completed && q.questType === 'daily').length,
@@ -174,6 +180,41 @@ export async function fetchFullState(userId: string): Promise<{ player: PlayerSt
 }
 
 // Create new Quest in Supabase
+export async function updateQuestInDB(userId: string, quest: Quest): Promise<boolean> {
+  try {
+    const { error: questError } = await supabase.from('quests').update({
+      title: quest.title,
+      description: quest.description || '',
+      difficulty: quest.difficulty,
+      xp_reward: quest.xpReward,
+      completed: quest.completed,
+      quest_type: quest.questType,
+      created_at: new Date(quest.createdAt).toISOString()
+    }).eq('id', quest.id).eq('user_id', userId);
+
+    if (questError) throw questError;
+
+    const { error: deleteRewardsError } = await supabase.from('quest_rewards').delete().eq('quest_id', quest.id);
+    if (deleteRewardsError) throw deleteRewardsError;
+
+    const rewardEntries = Object.entries(quest.statRewards).filter(([_, amount]) => amount && amount > 0);
+    if (rewardEntries.length > 0) {
+      const rewardsToInsert = rewardEntries.map(([k, amount]) => ({
+        quest_id: quest.id,
+        stat_name: STATS_MAP[k as StatKey],
+        reward_amount: amount
+      }));
+
+      const { error: rewardError } = await supabase.from('quest_rewards').insert(rewardsToInsert);
+      if (rewardError) throw rewardError;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error updating quest in Supabase:', err);
+    return false;
+  }
+}
 export async function createQuestInDB(userId: string, quest: Quest): Promise<boolean> {
   try {
     const { error: questError } = await supabase.from('quests').insert({
@@ -317,8 +358,25 @@ export async function updatePlayerStatsInDB(userId: string, stats: HunterStats):
 
 // Save Daily Check-in in Supabase
 export async function saveCheckinInDB(userId: string, checkin: DailyCheckIn, hpScore: number): Promise<boolean> {
-  try {
-    // Check if check-in exists for today
+  const basePayload = {
+    sleep_hours: checkin.sleepHours,
+    energy: checkin.energy,
+    mood: checkin.mood,
+    workout_completed: checkin.workoutDone,
+    sick: checkin.sick,
+    hp: hpScore
+  };
+
+  const fullPayload = {
+    ...basePayload,
+    deep_work_hours: checkin.deepWorkHours,
+    distraction_hours: checkin.distractionHours,
+    weight: checkin.weight ?? null,
+    calories: checkin.calories ?? null,
+    protein: checkin.protein ?? null
+  };
+
+  const saveWithPayload = async (payload: typeof basePayload | typeof fullPayload) => {
     const { data: existing } = await supabase
       .from('daily_checkins')
       .select('id')
@@ -328,31 +386,28 @@ export async function saveCheckinInDB(userId: string, checkin: DailyCheckIn, hpS
       .maybeSingle();
 
     if (existing) {
-      const { error } = await supabase.from('daily_checkins').update({
-        sleep_hours: checkin.sleepHours,
-        energy: checkin.energy,
-        mood: checkin.mood,
-        workout_completed: checkin.workoutDone,
-        sick: checkin.sick,
-        hp: hpScore
-      }).eq('id', existing.id);
-
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from('daily_checkins').insert({
-        user_id: userId,
-        sleep_hours: checkin.sleepHours,
-        energy: checkin.energy,
-        mood: checkin.mood,
-        workout_completed: checkin.workoutDone,
-        sick: checkin.sick,
-        hp: hpScore,
-        created_at: new Date(checkin.date + 'T12:00:00Z').toISOString()
-      });
-
-      if (error) throw error;
+      return supabase.from('daily_checkins').update(payload).eq('id', existing.id);
     }
 
+    return supabase.from('daily_checkins').insert({
+      user_id: userId,
+      ...payload,
+      created_at: new Date(checkin.date + 'T12:00:00Z').toISOString()
+    });
+  };
+
+  try {
+    const fullResult = await saveWithPayload(fullPayload);
+    if (!fullResult.error) return true;
+
+    const message = fullResult.error.message || '';
+    const isMissingOptionalColumn = ['deep_work_hours', 'distraction_hours', 'weight', 'calories', 'protein']
+      .some((column) => message.includes(column));
+
+    if (!isMissingOptionalColumn) throw fullResult.error;
+
+    const baseResult = await saveWithPayload(basePayload);
+    if (baseResult.error) throw baseResult.error;
     return true;
   } catch (err) {
     console.error('Error saving check-in in Supabase:', err);

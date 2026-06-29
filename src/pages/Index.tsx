@@ -8,16 +8,17 @@ import {
 } from '@/lib/game-system';
 import {
   type DailyCheckIn, type DailyStore,
-  loadDaily, saveDaily, upsertCheckIn, computeDailyEngine, applyDecay, todayStr,
+  loadDaily, saveDaily, upsertCheckIn, computeDailyEngine, applyDecay, todayStr, calculateCheckInStreak,
 } from '@/lib/daily-system';
 import {
-  getOrCreateUserId, fetchFullState, createQuestInDB, completeQuestInDB,
+  getOrCreateUserId, fetchFullState, createQuestInDB, updateQuestInDB, completeQuestInDB,
   deleteQuestInDB, setActiveRoleInDB, updateNameInDB, updatePlayerStatsInDB, saveCheckinInDB
 } from '@/lib/supabase-sync';
 import { supabase } from '@/integrations/supabase/client';
 import StatusPanel from '@/components/StatusPanel';
 import QuestList from '@/components/QuestList';
 import AddQuestModal from '@/components/AddQuestModal';
+import EditQuestModal from '@/components/EditQuestModal';
 import LevelUpOverlay from '@/components/LevelUpOverlay';
 import Dashboard from '@/components/Dashboard';
 import RolesTab from '@/components/RolesTab';
@@ -34,6 +35,7 @@ export default function Index() {
   const [tab, setTab] = useState<Tab>('home');
   const [questSubTab, setQuestSubTab] = useState<'all' | 'active' | 'daily' | 'weekly'>('all');
   const [showAddQuest, setShowAddQuest] = useState(false);
+  const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const [levelUpShow, setLevelUpShow] = useState(false);
   const [syncing, setSyncing] = useState(true);
 
@@ -218,6 +220,16 @@ export default function Index() {
     }
   };
 
+  const handleEditQuest = async (quest: Quest) => {
+    setPlayer((prev) => ({
+      ...prev,
+      quests: prev.quests.map((q) => (q.id === quest.id ? quest : q)),
+    }));
+
+    if (userId) {
+      await updateQuestInDB(userId, quest);
+    }
+  };
   const handleDeleteQuest = async (id: string) => {
     setPlayer((prev) => ({
       ...prev,
@@ -351,18 +363,26 @@ export default function Index() {
   };
 
   const handleSaveCheckIn = async (c: DailyCheckIn) => {
-    updateDaily((prev) => upsertCheckIn(prev, c));
+    let nextHistory: DailyCheckIn[] = [];
+    updateDaily((prev) => {
+      const next = upsertCheckIn(prev, c);
+      nextHistory = next.history;
+      return next;
+    });
     const result = computeDailyEngine(c);
+    const nextStreak = calculateCheckInStreak(nextHistory);
+
+    setPlayer((prev) => ({
+      ...prev,
+      streak: nextStreak,
+      bestStreak: Math.max(prev.bestStreak || 0, nextStreak),
+      systemMessages: result.messages.length > 0
+        ? [...prev.systemMessages, ...result.messages]
+        : prev.systemMessages,
+    }));
 
     if (userId) {
       await saveCheckinInDB(userId, c, result.hp);
-    }
-
-    if (result.messages.length > 0) {
-      setPlayer((prev) => ({
-        ...prev,
-        systemMessages: [...prev.systemMessages, ...result.messages],
-      }));
     }
   };
 
@@ -444,6 +464,7 @@ export default function Index() {
                   onComplete={handleCompleteQuest}
                   onDelete={handleDeleteQuest}
                   onRepeatTomorrow={handleRepeatTomorrow}
+                  onEdit={setEditingQuest}
                   title="All Quests"
                   emptyText="No quests yet. Add a custom quest or accept daily quests to begin."
                 />
@@ -456,6 +477,7 @@ export default function Index() {
                     onComplete={handleCompleteQuest}
                     onDelete={handleDeleteQuest}
                     onRepeatTomorrow={handleRepeatTomorrow}
+                    onEdit={setEditingQuest}
                     title="Active Quests"
                     emptyText="No active custom quests. Add one below."
                   />
@@ -484,6 +506,7 @@ export default function Index() {
                     onComplete={handleCompleteQuest}
                     onDelete={handleDeleteQuest}
                     onRepeatTomorrow={handleRepeatTomorrow}
+                    onEdit={setEditingQuest}
                     title="Daily Quests"
                     emptyText="Accept your daily quests above."
                   />
@@ -505,6 +528,7 @@ export default function Index() {
                     onComplete={handleCompleteQuest}
                     onDelete={handleDeleteQuest}
                     onRepeatTomorrow={handleRepeatTomorrow}
+                    onEdit={setEditingQuest}
                     title="Weekly Quests"
                     emptyText="Accept your weekly quests above."
                   />
@@ -535,6 +559,10 @@ export default function Index() {
               onAllocate={handleAllocateStat}
               onNameChange={handleNameChange}
               onReset={handleReset}
+              onCompleteQuest={handleCompleteQuest}
+              onDeleteQuest={handleDeleteQuest}
+              onRepeatTomorrow={handleRepeatTomorrow}
+              onEditQuest={setEditingQuest}
             />
           )}
         </div>
@@ -542,6 +570,7 @@ export default function Index() {
 
       <BottomNav active={tab} onChange={setTab} />
       <AddQuestModal open={showAddQuest} onClose={() => setShowAddQuest(false)} onAdd={handleAddQuest} />
+      <EditQuestModal quest={editingQuest} onClose={() => setEditingQuest(null)} onSave={handleEditQuest} />
       <LevelUpOverlay level={player.level} show={levelUpShow} onDone={() => setLevelUpShow(false)} />
     </div>
   );

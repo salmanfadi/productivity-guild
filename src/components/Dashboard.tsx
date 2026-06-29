@@ -64,7 +64,7 @@ export default function Dashboard({ player, onAllocate, onNameChange, onReset }:
         {[
           { icon: Coins, value: player.coins, label: 'Coins' },
           { icon: Trophy, value: player.totalQuestsCompleted, label: 'Quests' },
-          { icon: Calendar, value: `${player.dailyQuestsCompleted}d`, label: 'Streak' },
+          { icon: Calendar, value: `${player.streak}d`, label: 'Streak' },
         ].map((item, idx) => {
           const Icon = item.icon;
           return (

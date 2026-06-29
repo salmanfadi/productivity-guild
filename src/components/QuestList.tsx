@@ -1,5 +1,5 @@
 import { type Quest, type Difficulty, ALL_STATS } from '@/lib/game-system';
-import { Check, Trash2, Shield, Zap, Swords, Flame, Sparkles, RotateCcw } from 'lucide-react';
+import { Check, Trash2, Shield, Zap, Swords, Flame, Sparkles, RotateCcw, Pencil } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,11 +17,12 @@ interface QuestListProps {
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
   onRepeatTomorrow?: (quest: Quest) => void;
+  onEdit?: (quest: Quest) => void;
   title: string;
   emptyText: string;
 }
 
-export default function QuestList({ quests, onComplete, onDelete, onRepeatTomorrow, title, emptyText }: QuestListProps) {
+export default function QuestList({ quests, onComplete, onDelete, onRepeatTomorrow, onEdit, title, emptyText }: QuestListProps) {
   const openCount = quests.filter((quest) => !quest.completed).length;
 
   return (
@@ -113,6 +114,16 @@ export default function QuestList({ quests, onComplete, onDelete, onRepeatTomorr
                     </div>
 
                     <div className="flex shrink-0 items-center gap-1">
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(quest)}
+                          className="flex h-11 w-11 items-center justify-center rounded-full text-white/45 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                          aria-label={`Edit ${quest.title}`}
+                          title="Edit quest"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
                       {canRepeat && (
                         <button
                           onClick={() => onRepeatTomorrow(quest)}

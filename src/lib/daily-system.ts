@@ -187,9 +187,12 @@ export function saveDaily(s: DailyStore) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
 }
 
+export function getCheckInByDate(s: DailyStore, date: string): DailyCheckIn | null {
+  return s.history.find(c => c.date === date) || null;
+}
+
 export function getTodayCheckIn(s: DailyStore): DailyCheckIn | null {
-  const t = todayStr();
-  return s.history.find(c => c.date === t) || null;
+  return getCheckInByDate(s, todayStr());
 }
 
 export function upsertCheckIn(s: DailyStore, c: DailyCheckIn): DailyStore {
@@ -197,7 +200,21 @@ export function upsertCheckIn(s: DailyStore, c: DailyCheckIn): DailyStore {
   const history = [...s.history];
   if (idx >= 0) history[idx] = c;
   else history.push(c);
+  history.sort((a, b) => a.date.localeCompare(b.date));
   return { ...s, history };
+}
+
+export function calculateCheckInStreak(history: DailyCheckIn[], fromDate = todayStr()): number {
+  const dates = new Set(history.map(c => c.date));
+  let streak = 0;
+  const cursor = new Date(fromDate + 'T00:00:00Z');
+
+  while (dates.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  return streak;
 }
 
 function clamp(v: number, min: number, max: number) {
